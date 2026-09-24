@@ -1,0 +1,19 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Fixture corpora are byte-exact test data. Normalising their line endings would
+# change what the round-trip tests assert, so git must leave them alone.
+*.hex   -text
+*.kat   -text
+
+# The ordinal ledger records which target slot every field was assigned. A
+# conflict here means two branches each assigned a slot, and deciding which one
+# wins is a wire-compatibility decision, not a text merge. -merge stops git from
+# guessing; resolve it by regenerating.
+buffers.lock -merge
+
+# Generated trees are rewritten wholesale; keep them out of language stats and
+# out of diffs by default.
+protobuf/generated/** linguist-generated=true
+*.proto linguist-detectable=true
+*.fbs   linguist-detectable=true

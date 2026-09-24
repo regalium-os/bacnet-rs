@@ -1,0 +1,19 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "regalium-bacnet-telemetry"
+description = "Telemetry seam for the Regalium BACnet driver: tracer, meter and logger traits with no-op defaults and no dependencies."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+# Deliberately empty, and checked by `cargo xtask purity`. This crate is the
+# seam every layer talks to, so a dependency here is a dependency everywhere.
+[dependencies]
+
+[lints]
+workspace = true

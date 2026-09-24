@@ -1,0 +1,50 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Licences and advisories across the whole resolved graph. This is the check
+# `cargo xtask deps` cannot make: what a crate is allowed to be, rather than
+# what it is allowed to link.
+
+[advisories]
+yanked = "deny"
+# An unmaintained crate in a driver expected to run for years is a decision,
+# not an accident. Warn, and record the decision here when one is accepted.
+unmaintained = "workspace"
+
+# cargo-deny spells this key `licenses`. House style is British everywhere it
+# is ours to choose; a third-party tool's schema is not ours to choose.
+[licenses]
+# Apache-2.0 is what this project ships under; the rest are the permissive
+# licences compatible with redistributing a binary that embeds them. Anything
+# copyleft has to be a deliberate conversation, so it is absent rather than
+# denied with an exception waiting to be added.
+version = 2
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.93
+# The list above is what this project accepts, not an inventory of what the
+# graph currently holds. A licence nobody has pulled in yet is the list doing
+# its job in advance, so an unused allowance is not a finding.
+unused-allowed-license = "allow"
+
+[bans]
+# Two versions of the same crate in a graph this small usually means a
+# dependency was added without looking at what it brings.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+# The telemetry SDK is not on crates.io. It is pinned to an exact rev in the
+# manifest that depends on it, so an upstream push cannot change what builds
+# here without a commit that says so.
+allow-git = ["https://github.com/the-protobuf-project/telemetry"]

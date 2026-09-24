@@ -1,0 +1,26 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "regalium-bacnet"
+description = "BACnet driver for RegaliumOS: a pure-Rust ASHRAE 135 stack with a sans-io core."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+regalium-bacnet-core.workspace = true
+regalium-bacnet-ip.workspace = true
+regalium-bacnet-ipv6.workspace = true
+regalium-bacnet-mstp.workspace = true
+regalium-bacnet-runtime.workspace = true
+regalium-bacnet-sc.workspace = true
+regalium-bacnet-schema.workspace = true
+regalium-bacnet-telemetry.workspace = true
+regalium-bacnet-telemetry-otel.workspace = true
+
+[lints]
+workspace = true

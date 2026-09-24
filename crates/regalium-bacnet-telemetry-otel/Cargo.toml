@@ -1,0 +1,20 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "regalium-bacnet-telemetry-otel"
+description = "Adapter binding the Regalium BACnet telemetry seam to the-protobuf-project telemetry SDK."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+# The only crate in the workspace permitted to name an OpenTelemetry type, and
+# the reason the rest of the driver never has to. `cargo xtask deps` enforces it.
+[dependencies]
+regalium-bacnet-telemetry.workspace = true
+
+[lints]
+workspace = true

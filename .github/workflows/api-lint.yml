@@ -1,0 +1,54 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Google AIP lint over the schema tree, strictly.
+#
+# The workflow exists from the first commit and activates when the tree is
+# populated in Phase 9. That ordering is deliberate: the linter treats an empty
+# input as an error rather than a pass, and a red first commit is how people
+# learn to ignore a gate.
+name: API lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  aip:
+    name: Google AIP lint (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Look for a schema to lint
+        id: probe
+        run: |
+          if [ -n "$(find protobuf -name '*.proto' 2>/dev/null)" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "no .proto yet; the schema tree arrives in Phase 9"
+          fi
+
+      # working-directory is protobuf so each file's path matches its proto
+      # package. Linting from the repository root instead trips
+      # core::0191::proto-package on every file.
+      #
+      # ignore-comment-disables means a finding cannot be suppressed from
+      # inside the schema. An escape hatch in the file being reviewed is not a
+      # review.
+      - name: Lint
+        if: steps.probe.outputs.found == 'true'
+        uses: the-protobuf-project/setup-google-api-linter@f2f9161d0333b3da9e58595f249107fc2cdaa033
+        with:
+          version: 2.3.1
+          working-directory: protobuf
+          paths: "**/*.proto"
+          buf: true
+          buf-input: ".."
+          ignore-comment-disables: true
+          fail-on-error: true

@@ -1,0 +1,19 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "regalium-bacnet-mstp"
+description = "BACnet MS/TP master datalink (ASHRAE 135 Clause 9) over RS-485."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+regalium-bacnet-core.workspace = true
+regalium-bacnet-telemetry.workspace = true
+
+[lints]
+workspace = true

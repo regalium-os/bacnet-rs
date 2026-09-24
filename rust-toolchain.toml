@@ -1,0 +1,14 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Pinned so that "it builds on my machine" and "it builds in CI" mean the same
+# thing. Edition 2024 needs 1.85; the telemetry SDK we bind to pins 1.91, and a
+# driver that cannot be built beside its own telemetry adapter is not shippable.
+[toolchain]
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]
+targets = [
+    "armv7-unknown-linux-gnueabihf",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-unknown-linux-gnu",
+]

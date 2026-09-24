@@ -1,0 +1,18 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "regalium-bacnet-core"
+description = "Pure BACnet protocol core: tag codec, primitive and constructed types, APDU, NPDU, services, object model and the transaction state machine."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+regalium-bacnet-telemetry.workspace = true
+
+[lints]
+workspace = true

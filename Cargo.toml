@@ -1,0 +1,68 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# The workspace is the layering. Each crate in the table below may depend only
+# on the crates named in CLAUDE.md, and `cargo xtask arch` reads the resolved
+# dependency graph to prove it. Splitting the driver into crates rather than
+# modules is what makes that check mechanical: a module boundary is a
+# convention, a crate boundary is a fact the compiler already knows.
+[workspace]
+resolver = "3"
+members = [
+    "crates/regalium-bacnet",
+    "crates/regalium-bacnet-core",
+    "crates/regalium-bacnet-ip",
+    "crates/regalium-bacnet-ipv6",
+    "crates/regalium-bacnet-mstp",
+    "crates/regalium-bacnet-runtime",
+    "crates/regalium-bacnet-sc",
+    "crates/regalium-bacnet-schema",
+    "crates/regalium-bacnet-telemetry",
+    "crates/regalium-bacnet-telemetry-otel",
+    "xtask",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+license = "Apache-2.0"
+repository = "https://github.com/regalium-os/bacnet-rs"
+authors = ["RegaliumOS"]
+
+[workspace.dependencies]
+regalium-bacnet-core = { path = "crates/regalium-bacnet-core", version = "0.1.0" }
+regalium-bacnet-ip = { path = "crates/regalium-bacnet-ip", version = "0.1.0" }
+regalium-bacnet-ipv6 = { path = "crates/regalium-bacnet-ipv6", version = "0.1.0" }
+regalium-bacnet-mstp = { path = "crates/regalium-bacnet-mstp", version = "0.1.0" }
+regalium-bacnet-runtime = { path = "crates/regalium-bacnet-runtime", version = "0.1.0" }
+regalium-bacnet-sc = { path = "crates/regalium-bacnet-sc", version = "0.1.0" }
+regalium-bacnet-schema = { path = "crates/regalium-bacnet-schema", version = "0.1.0" }
+regalium-bacnet-telemetry = { path = "crates/regalium-bacnet-telemetry", version = "0.1.0" }
+regalium-bacnet-telemetry-otel = { path = "crates/regalium-bacnet-telemetry-otel", version = "0.1.0" }
+
+# Lints are declared once and inherited with `[lints] workspace = true`, so a
+# new crate cannot quietly opt out of them.
+[workspace.lints.rust]
+# Not "deny": forbid, which cannot be lifted by an inner attribute. A protocol
+# codec parsing hostile bytes has no business reaching for unsafe, and the one
+# place it would be tempting -- transmuting a buffer into a struct -- is exactly
+# where a malformed frame becomes a memory-safety bug.
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Never panic: malformed input is the normal case on a wire shared with noise,
+# and a driver that aborts the process on a bad length field takes the building
+# with it. These are warnings that CI escalates with -D warnings.
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+indexing_slicing = "warn"
+# Module names repeat the crate name on purpose here: `core::apdu`, `core::npdu`
+# read better than inventing synonyms for what the spec already calls them.
+module_name_repetitions = "allow"

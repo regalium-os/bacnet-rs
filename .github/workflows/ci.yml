@@ -1,0 +1,92 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Jobs are independent on purpose. A red lint should not hide a red gate, and
+# a reviewer reading a failed run should see everything that is wrong in one
+# pass rather than one problem per push.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  conformance:
+    name: Conformance gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: extractions/setup-just@v3
+      - uses: Swatinem/rust-cache@v2
+      # The gates over this repository, then the negative tests that prove
+      # each gate fails when it should. Both halves matter: a gate tested only
+      # against a correct tree reports success when it works and when it does
+      # nothing, and those are not the same thing.
+      - run: just gates
+      - run: cargo test -p xtask
+
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace
+      - run: cargo test --workspace --all-targets
+
+  fixtures:
+    name: Fixture corpora
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: extractions/setup-just@v3
+      - uses: Swatinem/rust-cache@v2
+      - run: just fixtures
+
+  lint:
+    name: Format and clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  deny:
+    name: Licences and advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  cross:
+    name: Cross-compile
+    runs-on: ubuntu-latest
+    # These panels are ARM. Pure Rust is what makes each of these one flag
+    # rather than a cross-compilation project, and the deps gate is what keeps
+    # it true by refusing anything that needs a C toolchain. Building here is
+    # the second opinion: a target that fails to link says the gate missed
+    # something no amount of reading manifests would have revealed.
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - armv7-unknown-linux-gnueabihf
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-gnu
+          - x86_64-pc-windows-gnu
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup target add ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - run: cargo check --workspace --target ${{ matrix.target }}
