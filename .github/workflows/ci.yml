@@ -75,18 +75,31 @@ jobs:
     # it true by refusing anything that needs a C toolchain. Building here is
     # the second opinion: a target that fails to link says the gate missed
     # something no amount of reading manifests would have revealed.
+    #
+    # The driver is checked with no C toolchain installed at all. Only then
+    # are the cross compilers installed, for the two crates the deps gate
+    # lets carry the telemetry SDK's audited zstd/lz4: the otel adapter and
+    # the probe. The order is the proof that the exception stays where it is.
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - armv7-unknown-linux-gnueabihf
-          - aarch64-unknown-linux-gnu
-          - x86_64-unknown-linux-gnu
-          - x86_64-pc-windows-gnu
+        include:
+          - { target: armv7-unknown-linux-gnueabihf, cc: gcc-arm-linux-gnueabihf }
+          - { target: aarch64-unknown-linux-gnu, cc: gcc-aarch64-linux-gnu }
+          - { target: x86_64-unknown-linux-gnu, cc: gcc }
+          - { target: x86_64-pc-windows-gnu, cc: gcc-mingw-w64-x86-64 }
     steps:
       - uses: actions/checkout@v5
       - run: rustup target add ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
-      - run: cargo check --workspace --target ${{ matrix.target }}
+      - name: The driver, with no C toolchain
+        run: >
+          cargo check --workspace --target ${{ matrix.target }}
+          --exclude regalium-bacnet-probe --exclude regalium-bacnet-telemetry-otel
+      - run: sudo apt-get update && sudo apt-get install -y ${{ matrix.cc }}
+      - name: The adapter and the probe, with the audited C libraries
+        run: >
+          cargo check --target ${{ matrix.target }}
+          -p regalium-bacnet-probe -p regalium-bacnet-telemetry-otel

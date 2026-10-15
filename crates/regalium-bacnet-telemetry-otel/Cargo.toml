@@ -12,9 +12,23 @@ repository.workspace = true
 authors.workspace = true
 
 # The only crate in the workspace permitted to name an OpenTelemetry type, and
-# the reason the rest of the driver never has to. `cargo xtask deps` enforces it.
+# the reason the rest of the driver never has to. `cargo xtask deps` enforces
+# it, and also that the SDK's native compression libraries (zstd, lz4, for its
+# MCAP recorder) reach no crate but this one and the application built on it.
 [dependencies]
 regalium-bacnet-telemetry.workspace = true
+telemetry.workspace = true
+opentelemetry.workspace = true
+# The SDK's OTLP gRPC exporter runs its connection tasks on a Tokio runtime;
+# this crate owns that runtime so its caller need not be async.
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread"] }
+# Installed silent before the SDK starts, so its console logger cannot write
+# over a terminal UI. `log` is a facade with no dependencies of its own.
+log = "0.4"
+
+[dev-dependencies]
+# An in-memory exporter, to prove labels reach the SDK intact.
+opentelemetry_sdk = { version = "0.32", default-features = false, features = ["metrics", "testing"] }
 
 [lints]
 workspace = true

@@ -33,6 +33,7 @@ pub const LAYERS: &[Layer] = &[
     Layer { krate: "regalium-bacnet-telemetry-otel", allowed: &[], pure: false },
     Layer { krate: "regalium-bacnet-runtime", allowed: DATALINKS, pure: false },
     Layer { krate: "regalium-bacnet", allowed: EVERYTHING, pure: false },
+    Layer { krate: "regalium-bacnet-probe", allowed: PROBE, pure: false },
 ];
 
 const CORE: &str = "regalium-bacnet-core";
@@ -46,6 +47,12 @@ const DATALINKS: &[&str] = &[
     "regalium-bacnet-ipv6",
     "regalium-bacnet-schema",
 ];
+
+/// The field probe, an application at the edge: it records through the seam
+/// and exports through the adapter. It reaches no protocol layer because it
+/// carries its own small codec until the core can read a device (Phase 8);
+/// then it moves onto the facade, and this entry changes to say so.
+const PROBE: &[&str] = &["regalium-bacnet-telemetry-otel"];
 
 /// The facade re-exports, so it reaches everything.
 const EVERYTHING: &[&str] = &[

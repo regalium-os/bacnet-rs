@@ -95,18 +95,33 @@ build:
 
 # Every target CI builds. Pure Rust is what makes this one flag per target
 # rather than a cross-compilation project, and `just gates` is what keeps it
-# that way by refusing a dependency that needs a C toolchain.
+# that way by refusing a dependency that needs a C toolchain. The otel adapter
+# and the probe carry the telemetry SDK's audited zstd/lz4, so they are
+# checked by `cross-probe`, which needs a cross C compiler per target.
 [group('build')]
-[doc('Build for every target CI builds')]
+[doc('Build the driver for every target CI builds')]
 cross:
     #!/usr/bin/env bash
     set -euo pipefail
     for target in armv7-unknown-linux-gnueabihf aarch64-unknown-linux-gnu \
                   x86_64-unknown-linux-gnu; do
         echo "::group::$target"
-        cargo check --workspace --target "$target"
+        cargo check --workspace --target "$target" \
+            --exclude regalium-bacnet-probe --exclude regalium-bacnet-telemetry-otel
         echo "::endgroup::"
     done
+
+# The probe and the otel adapter for one target; needs that target's C compiler.
+[group('build')]
+[doc('Check the probe for TARGET; needs a cross C compiler')]
+cross-probe target:
+    cargo check --target {{target}} -p regalium-bacnet-probe -p regalium-bacnet-telemetry-otel
+
+# The probe, installed from this checkout.
+[group('build')]
+[doc('Install bacnet-probe from this checkout')]
+probe:
+    cargo install --locked --path tools/bacnet-probe
 
 # Everything CI runs, in the order it runs it.
 [group('build')]

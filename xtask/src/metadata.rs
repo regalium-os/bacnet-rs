@@ -68,39 +68,8 @@ pub fn workspace_members(root: &Path) -> Result<Vec<Member>, String> {
         .collect())
 }
 
-/// A crate in the resolved graph.
-pub struct Resolved {
-    /// The crate name.
-    pub name: String,
-    /// The native library it links, when it declares one.
-    ///
-    /// This is cargo's own answer to "does building this need a C toolchain",
-    /// and it is why the gate does not guess from the name. `js-sys` ends in
-    /// `-sys` and binds JavaScript; `libc` does not and binds a C library.
-    pub links: Option<String>,
-}
-
-/// Every crate in the fully resolved graph, transitive dependencies included.
-///
-/// # Errors
-///
-/// When cargo cannot be run, or answers with something unparseable.
-pub fn resolved_crates(root: &Path) -> Result<Vec<Resolved>, String> {
-    let json = run_cargo(root, &["metadata", "--format-version", "1"])?;
-    let packages = packages_of(&json)?;
-    Ok(packages
-        .iter()
-        .filter_map(|p| {
-            Some(Resolved {
-                name: string(p, "name")?,
-                links: string(p, "links"),
-            })
-        })
-        .collect())
-}
-
 /// Runs cargo and parses its JSON, reporting its own words on failure.
-fn run_cargo(root: &Path, args: &[&str]) -> Result<Value, String> {
+pub(crate) fn run_cargo(root: &Path, args: &[&str]) -> Result<Value, String> {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
     let output = Command::new(cargo)
         .args(args)
