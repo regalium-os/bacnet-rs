@@ -49,10 +49,15 @@ fn header(frame: &mut Frame<'_>, app: &App, area: Rect) {
     let [left, right] =
         Layout::horizontal([Constraint::Length(30), Constraint::Min(0)]).areas(area);
     frame.render_widget(tabs, left);
-    let watch = if app.watching {
-        format!("polling every {:?}", app.interval)
-    } else {
-        "polling off".into()
+    let watch = match (app.watching, app.following) {
+        (false, _) => "live off".into(),
+        (true, Some((cov, polled))) => {
+            format!(
+                "live: {cov} by COV, {polled} polled every {:?}",
+                app.interval
+            )
+        }
+        (true, None) => format!("live: polling every {:?}", app.interval),
     };
     let status = Line::from(vec![
         Span::raw("bacnet-probe ").bold(),
@@ -89,7 +94,7 @@ fn footer(frame: &mut Frame<'_>, app: &App, area: Rect) {
         ("tab", "focus"),
         ("enter", "reload"),
         ("r", "discover"),
-        ("w", "poll"),
+        ("w", "live"),
         ("q", "quit"),
     ] {
         spans.push(Span::raw(format!(" {key} ")).bold().fg(Color::Cyan));
