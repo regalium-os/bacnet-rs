@@ -149,14 +149,24 @@ correct repository reports success both when it works and when it does nothing.
 
 The rules: no hand-written file over 200 lines, documentation included; no I/O
 or clock reads in the pure core; dependencies only ever pointing inward; no
-OpenTelemetry dependency outside the one adapter crate; and **nothing in the
-resolved graph that links a C library**, which is what keeps
+OpenTelemetry dependency outside the one adapter crate; and **nothing beneath
+the driver that links a C library**, which is what keeps
 `cargo check --target armv7-unknown-linux-gnueabihf` one flag rather than a
-cross-compilation project. CI builds every target on every run.
+cross-compilation project. CI builds every target on every run. The single,
+audited exception — the telemetry SDK's zstd and lz4 — is accepted beneath the
+otel adapter and the probe only, and the gate proves it reaches nothing else.
+
+## Field probe
+
+[`tools/bacnet-probe`](tools/bacnet-probe) discovers, browses, watches and
+exports BACnet/IP devices today, as a TUI and a scriptable CLI:
+`brew install regalium-os/tap/bacnet-probe`. It carries a small codec of its
+own until the core's first live read (Phase 8), then moves onto the driver.
 
 ## State
 
 Phase 0 is complete: the architecture, its gates, their negative tests, and CI.
+The telemetry seam's `Meter` and its SDK binding are in, ahead of the spans.
 
 Each phase ends with a committed corpus of hex-dumped traffic that decodes and
 re-encodes byte for byte, malformed records included, and no phase starts

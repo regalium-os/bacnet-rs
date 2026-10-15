@@ -17,7 +17,7 @@ Each of these fails CI. Run `just conformance` before you think you are done.
 | --- | --- |
 | No hand-written file exceeds 200 lines, **documentation included** | `xtask size` |
 | **No direct OpenTelemetry dependency**, outside the adapter | `xtask deps` |
-| **Nothing in the graph links a C library** | `xtask deps` + CI `cross` |
+| **Nothing beneath the driver links a C library** (audited exceptions: see Layering) | `xtask deps` + CI `cross` |
 | The pure core performs no I/O and reads no clock | `xtask purity` |
 | Dependencies only ever point inward | `xtask arch` |
 | Every hand-written file carries the Apache-2.0 notice | `xtask licence` |
@@ -122,6 +122,11 @@ with `pub use` and never a newtype: a re-export is the same type, so a third
 party can implement a datalink or add an object type without this repository
 being involved. A wrapper would compile and then silently close every
 extension point.
+
+The one exception to "no C" is the telemetry SDK's zstd and lz4 (MCAP):
+`xtask deps` accepts exactly those, beneath only the otel adapter and the
+probe; the facade reaches the adapter only via its opt-in `otel` feature.
+Widen either list only after reading the build script, and say why.
 
 Vendor differences live **only** in a profile: the revision-12 and revision-19
 Schindler object models are two profiles over one codec. A vendor never

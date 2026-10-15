@@ -1,0 +1,37 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# The field probe: discover, browse, watch and export BACnet/IP devices from a
+# terminal. An application, not part of the driver, and shipped on its own
+# (Homebrew, release archives) rather than to crates.io.
+#
+# It carries a deliberately small codec of its own, because the driver's core
+# does not decode a frame until Phase 3 and a site engineer needed to read a
+# lift controller now. When the core reaches its first live read (Phase 8),
+# the probe moves onto `regalium-bacnet` and this codec is deleted.
+[package]
+name = "regalium-bacnet-probe"
+description = "Discover, browse, watch and export BACnet/IP devices: an interactive TUI and scriptable CLI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lib]
+name = "bacnet_probe"
+
+[[bin]]
+name = "bacnet-probe"
+path = "src/bin/bacnet-probe/main.rs"
+
+[dependencies]
+regalium-bacnet-telemetry.workspace = true
+regalium-bacnet-telemetry-otel.workspace = true
+clap = { version = "4.6", features = ["derive"] }
+ratatui = "0.30"
+
+[lints]
+workspace = true

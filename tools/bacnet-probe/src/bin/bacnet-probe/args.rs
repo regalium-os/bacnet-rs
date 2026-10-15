@@ -1,0 +1,156 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+//! The command line: global network and telemetry options, and the
+//! subcommands. Options are accepted before or after the subcommand.
+
+use crate::cli;
+use bacnet_probe::Scope;
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use std::net::{Ipv4Addr, SocketAddr};
+use std::time::Duration;
+
+#[derive(Parser)]
+#[command(name = "bacnet-probe", version, about = "Discover, browse, watch and export BACnet/IP devices", after_help = EXAMPLES)]
+pub(crate) struct Cli {
+    #[command(subcommand)]
+    pub(crate) command: Option<Cmd>,
+    #[command(flatten)]
+    pub(crate) net: Net,
+    #[command(flatten)]
+    pub(crate) telemetry: Telemetry,
+}
+
+const EXAMPLES: &str = "\
+Examples:
+  bacnet-probe                                   interactive TUI, broadcast discovery
+  bacnet-probe --scan '192.168.*' whois          sweep every /24 in 192.168.0.0/16
+  bacnet-probe --bbmd 10.1.0.1 whois             reach another subnet through its BBMD
+  bacnet-probe read 599 analog-input:1           present-value, with units / state names
+  bacnet-probe find 'Car 1 load'                 which device holds this object (Who-Has)
+  bacnet-probe watch 599 --every 1               live values: COV where allowed, else polled
+  bacnet-probe scan --detail --format json > scan.json
+  bacnet-probe --otlp localhost:4317 export      every point, continuously, as metrics
+  bacnet-probe dissect '81 0a 00 11 01 04 00 05 01 0c 0c 02 00 02 57 19 4d'
+
+Without hardware:
+  cargo run -p regalium-bacnet-probe --example sim_device
+  bacnet-probe --target 127.0.0.1 --port 47809 --bind 127.0.0.1:0";
+
+/// Where and how to talk `BACnet`/IP.
+#[derive(Args, Clone, Debug)]
+pub(crate) struct Net {
+    /// Where Who-Is goes: a broadcast (subnet .255) or one device/router IP.
+    #[arg(long, global = true, default_value = "255.255.255.255")]
+    pub(crate) target: Ipv4Addr,
+    /// Sweep these ranges instead of --target, and accept answers only from
+    /// them: 192.168.*, 10.1.0.0/16, or one address. Repeatable.
+    #[arg(long, global = true, value_name = "RANGE")]
+    pub(crate) scan: Vec<Scope>,
+    /// With --scan: one Who-Is per host instead of per /24 broadcast, for
+    /// routers that drop directed broadcasts.
+    #[arg(long, global = true)]
+    pub(crate) unicast: bool,
+    /// With --scan: datagrams per second.
+    #[arg(long, global = true, default_value_t = 500)]
+    pub(crate) rate: u32,
+    /// Register as a foreign device with this BBMD (IP or IP:port) and
+    /// discover through it.
+    #[arg(long, global = true, value_name = "ADDR", value_parser = parse_bbmd)]
+    pub(crate) bbmd: Option<SocketAddr>,
+    /// Foreign device registration time-to-live, seconds; renewed before it lapses.
+    #[arg(long, global = true, default_value_t = 300)]
+    pub(crate) ttl: u16,
+    /// `BACnet`/IP UDP port.
+    #[arg(long, global = true, default_value_t = 47808)]
+    pub(crate) port: u16,
+    /// Local socket [default: 0.0.0.0:<port>, else an ephemeral port].
+    #[arg(long, global = true)]
+    pub(crate) bind: Option<SocketAddr>,
+    /// Seconds to collect I-Am replies.
+    #[arg(long, global = true, default_value = "3", value_parser = seconds)]
+    pub(crate) wait: Duration,
+    /// Seconds to wait for each reply before retrying.
+    #[arg(long, global = true, default_value = "2", value_parser = seconds)]
+    pub(crate) timeout: Duration,
+    /// Dissect every packet sent and received to stderr (subcommands only).
+    #[arg(long, global = true)]
+    pub(crate) explain: bool,
+}
+
+/// Where metrics go.
+#[derive(Args, Clone, Debug)]
+pub(crate) struct Telemetry {
+    /// Export metrics over OTLP gRPC to HOST:PORT, from any command. Without
+    /// it only `export` exports, to telemetry.toml / TELEMETRY_* / the SDK default.
+    #[arg(long, global = true, value_name = "HOST:PORT", value_parser = parse_otlp)]
+    pub(crate) otlp: Option<(String, u16)>,
+    /// A resource label on every exported series, e.g. --label site=tower-a. Repeatable.
+    #[arg(long, global = true, value_name = "KEY=VALUE", value_parser = parse_label)]
+    pub(crate) label: Vec<(String, String)>,
+}
+
+#[derive(Subcommand)]
+pub(crate) enum Cmd {
+    /// Interactive browser (the default when no subcommand is given).
+    Tui {
+        /// Seconds between polls of points that do not support COV.
+        #[arg(long, default_value = "2", value_parser = seconds)]
+        interval: Duration,
+    },
+    /// List the devices that answer Who-Is.
+    Whois(cli::whois::WhoisArgs),
+    /// Find which device holds an object, by name or TYPE:N (Who-Has).
+    Find(cli::whois::FindArgs),
+    /// Read properties of one object.
+    Read(cli::read::ReadArgs),
+    /// Discover, then read every object of every device.
+    Scan(cli::scan::ScanArgs),
+    /// Follow present-values and print each change: COV where the device
+    /// allows it, polled where not.
+    Watch(cli::watch::WatchArgs),
+    /// Run headless: every point of every device, continuously, as metrics.
+    Export(cli::export::ExportArgs),
+    /// Dissect a hex-dumped datagram, offline (stdin if none given).
+    Dissect(cli::dissect::DissectArgs),
+}
+
+/// `table` for people, `json` for programs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+pub(crate) enum Format {
+    #[default]
+    Table,
+    Json,
+}
+
+pub(crate) fn seconds(s: &str) -> Result<Duration, String> {
+    let secs: f64 = s.parse().map_err(|e| format!("{e}"))?;
+    Duration::try_from_secs_f64(secs).map_err(|e| e.to_string())
+}
+
+fn parse_bbmd(s: &str) -> Result<SocketAddr, String> {
+    s.parse::<SocketAddr>()
+        .or_else(|_| {
+            s.parse::<Ipv4Addr>()
+                .map(|ip| SocketAddr::from((ip, 47808)))
+        })
+        .map_err(|_| format!("{s:?}: expected an IPv4 address, optionally with :port"))
+}
+
+fn parse_otlp(s: &str) -> Result<(String, u16), String> {
+    let (host, port) = s
+        .rsplit_once(':')
+        .ok_or_else(|| format!("{s:?}: expected HOST:PORT, e.g. localhost:4317"))?;
+    Ok((
+        host.to_owned(),
+        port.parse()
+            .map_err(|_| format!("{port:?} is not a port"))?,
+    ))
+}
+
+fn parse_label(s: &str) -> Result<(String, String), String> {
+    let (k, v) = s
+        .split_once('=')
+        .ok_or_else(|| format!("{s:?}: expected KEY=VALUE"))?;
+    Ok((k.to_owned(), v.to_owned()))
+}

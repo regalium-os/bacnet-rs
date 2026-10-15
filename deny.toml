@@ -35,6 +35,31 @@ confidence-threshold = 0.93
 # its job in advance, so an unused allowance is not a finding.
 unused-allowed-license = "allow"
 
+# Exceptions are per crate, never a licence added to the list above: each one
+# is a single dependency someone read, not a door left open for the next.
+# Both arrive through the telemetry SDK, beneath the otel adapter only.
+exceptions = [
+    # MPL-2.0 is file-level copyleft: it binds changes to colored's own files,
+    # which we neither modify nor vendor. The SDK colours its console logger.
+    { crate = "colored", allow = ["MPL-2.0"] },
+    # 0BSD is BSD with the attribution clause removed: more permissive than
+    # anything on the list. log4rs uses mock_instant for its rolling clock.
+    { crate = "mock_instant", allow = ["0BSD"] },
+]
+
+# The telemetry SDK's manifests omit a licence field; its repository is
+# Apache-2.0 throughout (LICENSE at the root of the-protobuf-project/telemetry,
+# pinned by rev in Cargo.toml). Remove these when the manifests say so.
+[[licenses.clarify]]
+crate = "telemetry"
+expression = "Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+crate = "telemetry-derive"
+expression = "Apache-2.0"
+license-files = []
+
 [bans]
 # Two versions of the same crate in a graph this small usually means a
 # dependency was added without looking at what it brings.

@@ -1,0 +1,114 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Releases the field probe. A tag `bacnet-probe-vX.Y.Z` builds an archive per
+# platform, publishes them on a GitHub release with their SHA-256 sums and
+# the Homebrew formula that installs them, and — when HOMEBREW_TAP_TOKEN is
+# set — commits that formula to regalium-os/homebrew-tap.
+#
+# Linux builds run on Ubuntu 22.04 so the binaries need glibc 2.35, not
+# whatever the newest runner ships: a site laptop is rarely the newest.
+name: Release bacnet-probe
+
+on:
+  push:
+    tags: ["bacnet-probe-v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: macos-14, target: aarch64-apple-darwin }
+          - { os: macos-14, target: x86_64-apple-darwin }
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu }
+    steps:
+      - uses: actions/checkout@v5
+      # The tag is the version; refuse one that disagrees with the crate.
+      - name: Check the tag matches the crate version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#bacnet-probe-v}"
+          crate="$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="regalium-bacnet-probe"))')"
+          [ "$tag" = "$crate" ] || { echo "tag $tag != crate $crate"; exit 1; }
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+      - run: rustup target add ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+      - run: cargo build --release --locked -p regalium-bacnet-probe --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        run: |
+          name="bacnet-probe-${VERSION}-${{ matrix.target }}"
+          mkdir -p "dist/$name"
+          cp "target/${{ matrix.target }}/release/bacnet-probe" LICENSE tools/bacnet-probe/README.md "dist/$name/"
+          "dist/$name/bacnet-probe" --version
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          (cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*.tar.gz*
+
+  release:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Render the Homebrew formula
+        run: |
+          version="${GITHUB_REF_NAME#bacnet-probe-v}"
+          tools/bacnet-probe/dist/formula.sh "$version" dist > dist/bacnet-probe.rb
+          cat dist/bacnet-probe.rb
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.sha256 dist/bacnet-probe.rb \
+            --title "bacnet-probe ${GITHUB_REF_NAME#bacnet-probe-v}" \
+            --notes-file tools/bacnet-probe/dist/release-notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: formula
+          path: dist/bacnet-probe.rb
+
+  tap:
+    name: Update the Homebrew tap
+    needs: release
+    runs-on: ubuntu-22.04
+    env:
+      TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: formula
+      - name: Commit the formula to regalium-os/homebrew-tap
+        if: env.TOKEN != ''
+        run: |
+          git clone "https://x-access-token:${TOKEN}@github.com/regalium-os/homebrew-tap.git" tap
+          mkdir -p tap/Formula && cp bacnet-probe.rb tap/Formula/bacnet-probe.rb
+          cd tap
+          git config user.name "bacnet-rs release"
+          git config user.email "releases@regalium.invalid"
+          git add Formula/bacnet-probe.rb
+          git commit -m "bacnet-probe ${GITHUB_REF_NAME#bacnet-probe-v}" && git push
+      - name: No tap token
+        if: env.TOKEN == ''
+        run: echo "HOMEBREW_TAP_TOKEN is not set; copy bacnet-probe.rb from the release into the tap by hand."

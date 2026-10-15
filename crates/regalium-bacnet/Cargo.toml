@@ -20,7 +20,13 @@ regalium-bacnet-runtime.workspace = true
 regalium-bacnet-sc.workspace = true
 regalium-bacnet-schema.workspace = true
 regalium-bacnet-telemetry.workspace = true
-regalium-bacnet-telemetry-otel.workspace = true
+# Opt-in: exporting through the telemetry SDK brings its native compression
+# libraries (zstd, lz4) and a C toolchain. A plain dependency on the driver
+# stays pure Rust and a one-flag cross build; `cargo xtask deps` holds it so.
+regalium-bacnet-telemetry-otel = { workspace = true, optional = true }
+
+[features]
+otel = ["dep:regalium-bacnet-telemetry-otel"]
 
 [lints]
 workspace = true

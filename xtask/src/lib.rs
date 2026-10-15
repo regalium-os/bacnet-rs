@@ -11,6 +11,8 @@
 
 pub mod arch;
 pub mod deps;
+mod features;
+pub mod graph;
 pub mod licence;
 pub mod metadata;
 pub mod purity;

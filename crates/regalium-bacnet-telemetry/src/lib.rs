@@ -6,8 +6,13 @@
 //!
 //! Observability for this project goes through the the-protobuf-project
 //! telemetry SDK, never through an OpenTelemetry import. This crate is the
-//! whole seam — [`Tracer`], [`Meter`] and [`Logger`] say what the layers need,
-//! and `regalium-bacnet-telemetry-otel` attaches the SDK to them.
+//! whole seam — it says what the layers need, and
+//! `regalium-bacnet-telemetry-otel` attaches the SDK to it.
+//!
+//! Today that is [`Meter`]: declared [`Instrument`]s recorded with
+//! [`Attribute`]s built from the declared [`keys`]. The tracer and logger
+//! traits land with the phases that open the first spans (Phase 3, the tag
+//! codec), under the same rules.
 //!
 //! # Why this exists at commit one
 //!
@@ -19,8 +24,10 @@
 //!
 //! # Layer contract
 //!
-//! Owns: the tracer, meter and logger traits, their no-op implementations, the
-//! attribute-declaration macro, and the attribute key constants.
+//! Owns: the meter trait and its no-op implementation, instrument and
+//! attribute declarations, and the attribute key constants. The tracer and
+//! logger traits, and the `trace_attrs!` declaration macro, join them with
+//! the first spans.
 //!
 //! Must not: perform I/O, read a clock, allocate on a no-op path, or name a
 //! type from any telemetry implementation. This crate has no dependencies and
@@ -42,3 +49,17 @@
 //! Span names are `bacnet.<layer>.<operation>` — `bacnet.tag.decode`,
 //! `bacnet.apdu.decode`, `bacnet.npdu.route`, `bacnet.tsm.transaction`.
 //! Each crate's own documentation lists the spans it opens.
+//!
+//! # Metrics
+//!
+//! Instrument names are `bacnet.<thing>.<measure>` and labels are only ever
+//! [`keys`]: which device, which object, which service — never a value read
+//! from equipment. The probe's instruments are declared in its `metrics`
+//! module; the driver's arrive with the runtime.
+
+mod attribute;
+pub mod keys;
+mod meter;
+
+pub use attribute::{Attribute, AttributeValue, Key};
+pub use meter::{Instrument, Kind, Meter, NoopMeter};

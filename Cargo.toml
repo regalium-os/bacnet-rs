@@ -19,6 +19,7 @@ members = [
     "crates/regalium-bacnet-schema",
     "crates/regalium-bacnet-telemetry",
     "crates/regalium-bacnet-telemetry-otel",
+    "tools/bacnet-probe",
     "xtask",
 ]
 
@@ -40,6 +41,13 @@ regalium-bacnet-sc = { path = "crates/regalium-bacnet-sc", version = "0.1.0" }
 regalium-bacnet-schema = { path = "crates/regalium-bacnet-schema", version = "0.1.0" }
 regalium-bacnet-telemetry = { path = "crates/regalium-bacnet-telemetry", version = "0.1.0" }
 regalium-bacnet-telemetry-otel = { path = "crates/regalium-bacnet-telemetry-otel", version = "0.1.0" }
+
+# The the-protobuf-project telemetry SDK. Not on crates.io; pinned to an exact
+# commit so an upstream push cannot change what builds here without a commit
+# here that says so. Only `regalium-bacnet-telemetry-otel` may depend on it,
+# together with the OpenTelemetry API version the SDK itself is built on.
+telemetry = { git = "https://github.com/the-protobuf-project/telemetry", rev = "884f94d7858df3525fa77f382cbc833c60a76333", version = "1.0.0" }
+opentelemetry = { version = "0.32", default-features = false, features = ["metrics"] }
 
 # Lints are declared once and inherited with `[lints] workspace = true`, so a
 # new crate cannot quietly opt out of them.
