@@ -21,6 +21,13 @@ pub(super) struct Sub {
     last: Option<Value>,
 }
 
+impl Sub {
+    /// The object this subscription follows.
+    pub(super) fn object(&self) -> ObjectId {
+        self.object
+    }
+}
+
 impl Sim {
     /// Adds, renews or (with no lifetime) cancels a subscription; returns
     /// the initial notification for a new or renewed one.

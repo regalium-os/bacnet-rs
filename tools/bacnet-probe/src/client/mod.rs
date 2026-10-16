@@ -1,7 +1,8 @@
 // Copyright 2026 RegaliumOS™.
 // SPDX-License-Identifier: Apache-2.0
 
-//! A blocking `BACnet`/IP client over one UDP socket.
+//! A blocking `BACnet`/IP client over one UDP socket: it reads, writes,
+//! creates and deletes.
 //!
 //! One socket carries everything: replies to our requests, I-Am and I-Have
 //! answers, COV notifications, BVLC results. Whatever arrives while waiting
@@ -22,6 +23,7 @@ mod plan;
 mod read;
 mod socket;
 mod transact;
+mod write;
 
 pub use error::ReadError;
 pub use foreign::ForeignError;

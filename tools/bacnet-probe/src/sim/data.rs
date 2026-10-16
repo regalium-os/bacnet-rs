@@ -11,8 +11,8 @@ use std::collections::HashMap;
 pub(super) type Table = HashMap<(ObjectId, u32), Vec<Value>>;
 
 /// A gateway with one car: load, door, mode, a fan, and a hot machine room.
-/// Advertises `ReadProperty`, `ReadPropertyMultiple`, `SubscribeCOV`, Who-Is and
-/// Who-Has, as a modern controller does.
+/// Advertises reading, writing, creating and deleting, `SubscribeCOV`,
+/// Who-Is and Who-Has, as a modern controller does.
 pub(super) fn lift_gateway() -> Table {
     let text = |s: &str| vec![Value::Text(s.into())];
     let one = |v: Value| vec![v];
@@ -27,9 +27,11 @@ pub(super) fn lift_gateway() -> Table {
         })
         .collect();
     let services: Vec<bool> = (0..41)
-        .map(|i| matches!(i, 5 | 12 | 14 | 26 | 27 | 33 | 34))
+        .map(|i| matches!(i, 5 | 10 | 11 | 12 | 14 | 15 | 16 | 26 | 27 | 33 | 34))
         .collect();
-    let types: Vec<bool> = (0..60).map(|i| matches!(i, 0 | 1 | 3 | 8 | 19)).collect();
+    let types: Vec<bool> = (0..60)
+        .map(|i| matches!(i, 0 | 1 | 2 | 3 | 5 | 8 | 19))
+        .collect();
     let objects = [DEVICE, CAR_LOAD, MACHINE_ROOM, FAN, DOOR, MODE]
         .map(Value::Object)
         .to_vec();

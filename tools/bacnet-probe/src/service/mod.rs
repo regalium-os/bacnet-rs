@@ -1,16 +1,19 @@
 // Copyright 2026 RegaliumOS™.
 // SPDX-License-Identifier: Apache-2.0
 
-//! Service codecs (Clauses 13–16): what goes inside an APDU, as plain data.
+//! Service codecs (Clauses 13–16): what goes inside an APDU, as plain data,
+//! for reading, writing, creating and deleting.
 //!
 //! Pure functions, shared by the client and the simulator so the two cannot
 //! disagree about the wire. Decoders borrow the APDU body and copy values
 //! out; nothing returned borrows the datagram.
 
 pub mod cov;
+pub mod object;
 pub mod read;
 pub mod rpm;
 pub mod who;
+pub mod write;
 
 mod reader;
 
@@ -24,10 +27,18 @@ pub mod confirmed {
     pub const COV_NOTIFICATION: u8 = 1;
     /// `SubscribeCOV`.
     pub const SUBSCRIBE_COV: u8 = 5;
+    /// `CreateObject`.
+    pub const CREATE_OBJECT: u8 = 10;
+    /// `DeleteObject`.
+    pub const DELETE_OBJECT: u8 = 11;
     /// `ReadProperty`.
     pub const READ_PROPERTY: u8 = 12;
     /// `ReadPropertyMultiple`.
     pub const READ_PROPERTY_MULTIPLE: u8 = 14;
+    /// `WriteProperty`.
+    pub const WRITE_PROPERTY: u8 = 15;
+    /// `WritePropertyMultiple`.
+    pub const WRITE_PROPERTY_MULTIPLE: u8 = 16;
 }
 
 /// Unconfirmed service choices (§21, `BACnetUnconfirmedServiceChoice`).
@@ -109,3 +120,5 @@ pub fn reject(invoke: u8, reason: u8) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod write_tests;

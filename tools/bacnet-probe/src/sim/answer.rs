@@ -96,7 +96,10 @@ impl Sim {
                 }
                 None => malformed(),
             },
-            _ => vec![service::reject(invoke, 9)], // unrecognized-service
+            _ => vec![
+                self.change(invoke, choice, body)
+                    .unwrap_or_else(|| service::reject(invoke, 9)), // unrecognized-service
+            ],
         }
     }
 

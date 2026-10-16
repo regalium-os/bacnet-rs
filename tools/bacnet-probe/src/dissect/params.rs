@@ -50,6 +50,10 @@ pub(super) fn walk(c: &mut Cursor<'_>, service: Service) -> Option<()> {
                 }
                 Shape::Unsigned if data.len() <= 8 => tag::be(data).to_string(),
                 Shape::Bool => (data.first().copied().unwrap_or(0) != 0).to_string(),
+                Shape::Kind => u16::try_from(tag::be(data)).map_or_else(
+                    |_| format!("{data:02x?}"),
+                    |k| format!("{} ({k})", names::object_type(k)),
+                ),
                 Shape::Text => format!("{:?}", tag::text(data)),
                 _ => format!("{data:02x?}"),
             };

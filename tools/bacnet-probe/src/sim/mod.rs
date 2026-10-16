@@ -4,18 +4,23 @@
 //! A simulated `BACnet`/IP lift gateway, so the probe can be exercised — and
 //! its output understood — with no hardware.
 //!
-//! It answers Who-Is, Who-Has, `ReadProperty` and `ReadPropertyMultiple`, keeps
-//! COV subscriptions and sends their notifications, and accepts foreign
-//! device registration as a BBMD would. Each capability can be switched off
+//! It answers Who-Is, Who-Has, `ReadProperty` and `ReadPropertyMultiple`;
+//! accepts `WriteProperty`, `WritePropertyMultiple`, `CreateObject` and
+//! `DeleteObject`, refusing them with a controller's error codes; keeps COV
+//! subscriptions and notifies changes, including written ones; and accepts
+//! foreign device registration as a BBMD would. Each capability can be switched off
 //! to imitate an older controller, which is how the probe's fallbacks are
 //! tested.
 
 mod answer;
+mod change;
 mod cov;
 mod data;
+mod write;
 
 use crate::frame::{self, Delivery, bvll};
 use crate::tag::{ObjectId, Value};
+use std::collections::HashSet;
 use std::io;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::{Duration, Instant};
@@ -43,6 +48,11 @@ pub struct Sim {
     cov: bool,
     accept_foreign: bool,
     subs: Vec<cov::Sub>,
+    /// Objects whose present-value was written, or that were created: they
+    /// hold what was written instead of moving when live.
+    pinned: HashSet<ObjectId>,
+    /// Objects created at runtime, and so the only ones that may be deleted.
+    created: HashSet<ObjectId>,
 }
 
 impl Sim {
@@ -58,6 +68,8 @@ impl Sim {
             cov: true,
             accept_foreign: true,
             subs: Vec::new(),
+            pinned: HashSet::new(),
+            created: HashSet::new(),
         }
     }
 
@@ -150,7 +162,7 @@ impl Sim {
     /// The present-value of `object` now: fixed, or moving when live.
     fn present(&self, object: ObjectId) -> Option<Value> {
         let fixed = self.props.get(&(object, 85))?.first()?.clone();
-        if !self.live {
+        if !self.live || self.pinned.contains(&object) {
             return Some(fixed);
         }
         let step = self.started.elapsed().as_millis() / 700;

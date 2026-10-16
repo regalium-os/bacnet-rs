@@ -133,15 +133,7 @@ impl Client {
 }
 
 fn error_pdu(body: &[u8]) -> ReadError {
-    use crate::tag::{Value, decode};
-    let class = decode(body);
-    let code = class
-        .as_ref()
-        .and_then(|(_, used)| decode(body.get(*used..)?));
-    match (class, code) {
-        (Some((Value::Enumerated(class), _)), Some((Value::Enumerated(code), _))) => {
-            ReadError::Bacnet { class, code }
-        }
-        _ => ReadError::Malformed,
-    }
+    crate::service::object::decode_error(body).map_or(ReadError::Malformed, |(class, code)| {
+        ReadError::Bacnet { class, code }
+    })
 }

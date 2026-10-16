@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Shared by several test binaries, each of which uses a subset.
-#![allow(dead_code, clippy::unwrap_used, clippy::expect_used)]
+#![allow(dead_code, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 //! A simulated gateway on localhost, and a client that has found it.
 
 use bacnet_probe::sim::Sim;
-use bacnet_probe::{Client, Device};
+use bacnet_probe::{Client, Device, ReadError};
 use regalium_bacnet_telemetry::{Attribute, AttributeValue, Instrument, Meter};
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -34,6 +34,15 @@ pub(crate) fn discover(sim: Sim) -> (Client, Device, SocketAddr) {
         "the simulated device should answer Who-Is exactly once"
     );
     (client, devices.remove(0), addr)
+}
+
+/// The (error-class, error-code) a request was refused with; panics on
+/// success or any other failure, since a test calling this expects a refusal.
+pub(crate) fn refused<T: std::fmt::Debug>(result: Result<T, ReadError>) -> (u32, u32) {
+    match result {
+        Err(ReadError::Bacnet { class, code }) => (class, code),
+        other => panic!("expected a BACnet error, got {other:?}"),
+    }
 }
 
 /// One recording: instrument name, labels as text, value.

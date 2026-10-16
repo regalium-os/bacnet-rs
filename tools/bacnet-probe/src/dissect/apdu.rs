@@ -51,8 +51,7 @@ pub(super) fn apdu(c: &mut Cursor<'_>) -> Option<()> {
         }
         5 => {
             invoke(c)?;
-            confirmed(c)?;
-            Service::Error
+            Service::error(confirmed(c)?)
         }
         6 => {
             invoke(c)?;
