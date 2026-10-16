@@ -104,6 +104,17 @@ api-lint:
 gen:
     buf generate --template tools/protobuf/buf/rust.buf.gen.yaml
 
+# Regenerate the FlatBuffers and Cap'n Proto mirrors of the hot path, and the
+# ordinal ledger, from a descriptor set narrowed to what a COV notification
+# needs. Needs buffers with the protovalidate and NullValue fixes (>= 0.2.2).
+[group('codegen')]
+[doc('Regenerate the hot-path mirrors and the ordinal ledger')]
+gen-mirror:
+    buf build --type bacnet.object.v1.StreamNotificationsResponse \
+        -o protobuf/generated/payloads.descriptor.binpb
+    buffers generate
+    buffers verify
+
 # Fails when the committed types are not what protobuf/ generates: a .proto
 # edited without `just gen` ships a crate that disagrees with its schema.
 [group('codegen')]

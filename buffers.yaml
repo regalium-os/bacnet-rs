@@ -1,0 +1,43 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# buffers.yaml -- the mirrored schema for the hot-path payloads.
+#
+# The .proto tree is the source of truth. This file derives the zero-copy
+# schemas from it rather than anyone keeping a second copy by hand.
+version: v1
+
+proto:
+  # A descriptor set, not the .proto tree: the protos import googleapis and
+  # protovalidate, and buf has already resolved those.
+  #
+  # The set is deliberately narrow. `just gen mirror` builds it with
+  # `--type bacnet.object.v1.StreamNotificationsResponse`, so it holds COV
+  # notifications, the values they carry, and exactly what those need. A
+  # building's change-of-value traffic is the payload encoded thousands of
+  # times a minute; the configuration surface stays protobuf only, where
+  # parsing time never mattered.
+  descriptor_set: protobuf/generated/payloads.descriptor.binpb
+
+out: protobuf/generated
+
+# The ordinal ledger, committed. A slot is a wire format: a consumer compiled
+# when a field sat at ordinal 5 reads slot 5 forever, and none of these
+# formats reports it when a rebuild puts something else there.
+lock: buffers.lock
+
+# A moved ordinal is an error, not a warning.
+strict: ordinal:error
+
+generate:
+  # Schemas only, no language bindings yet. What protects the wire format is
+  # the ledger and the schema, both committed; compiled bindings would add the
+  # capnp and flatbuffers runtimes to the graph with nothing using them. The
+  # consumer that needs zero-copy adds `languages: [rust]` here.
+  #
+  # Cap'n Proto: true zero-copy reads.
+  - target: capnp
+
+  # FlatBuffers: the interchange format the embedded side of the industry
+  # speaks, from the same source.
+  - target: flatbuffers
