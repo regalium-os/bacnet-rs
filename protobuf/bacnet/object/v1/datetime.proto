@@ -1,0 +1,69 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "buf/validate/validate.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "DatetimeProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// A date, §20.2.12. Every field may be absent, which is the standard's
+// "unspecified" (255 on the wire): a schedule that runs every Monday is a
+// date with only day_of_week set.
+message Date {
+  // The year, 1900 to 2154.
+  optional int32 year = 1 [(buf.validate.field).int32 = {
+    gte: 1900
+    lte: 2154
+  }];
+
+  // 1 to 12; 13 means every odd month and 14 every even month.
+  optional int32 month = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 14
+  }];
+
+  // 1 to 31; 32 is the last day of the month, 33 every odd day and 34 every
+  // even day.
+  optional int32 day = 3 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 34
+  }];
+
+  // 1 is Monday, 7 is Sunday.
+  optional int32 day_of_week = 4 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 7
+  }];
+}
+
+// A time of day, §20.2.13. Every field may be absent ("unspecified").
+message Time {
+  // 0 to 23.
+  optional int32 hour = 1 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 23
+  }];
+
+  // 0 to 59.
+  optional int32 minute = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 59
+  }];
+
+  // 0 to 59.
+  optional int32 second = 3 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 59
+  }];
+
+  // Hundredths of a second, 0 to 99.
+  optional int32 hundredths = 4 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 99
+  }];
+}

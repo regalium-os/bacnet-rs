@@ -1,0 +1,64 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.device.v1;
+
+option java_multiple_files = true;
+option java_outer_classname = "EnumsProto";
+option java_package = "dev.regalium.bacnet.device.v1";
+
+// Whether a device can split a message across several APDUs, the
+// segmentation-supported property (§12.11). A device that cannot will
+// refuse a reply too large for one, which is why a reader asks for less.
+enum Segmentation {
+  // Default, unused.
+  SEGMENTATION_UNSPECIFIED = 0;
+
+  // Sends and receives segmented messages.
+  SEGMENTATION_BOTH = 1;
+
+  // Sends segmented replies, but accepts only whole requests.
+  SEGMENTATION_TRANSMIT = 2;
+
+  // Accepts segmented requests, but replies only whole.
+  SEGMENTATION_RECEIVE = 3;
+
+  // Neither: every message must fit one APDU.
+  SEGMENTATION_NONE = 4;
+}
+
+// What this service last saw of a device.
+//
+// Going quiet is an expected event in a building, not an error: a
+// controller reboots, a trunk is rewired. The state says so, and the device
+// stays listed, so the place it disappeared from stays visible.
+enum DeviceState {
+  // Default, unused.
+  DEVICE_STATE_UNSPECIFIED = 0;
+
+  // Answered its most recent request.
+  DEVICE_STATE_REACHABLE = 1;
+
+  // Did not answer its most recent request, after retries.
+  DEVICE_STATE_UNREACHABLE = 2;
+}
+
+// The datalink a device was reached over. Clause 9 and Annexes J, U and AB.
+enum Datalink {
+  // Default, unused.
+  DATALINK_UNSPECIFIED = 0;
+
+  // BACnet/IP, Annex J.
+  DATALINK_BACNET_IP = 1;
+
+  // BACnet/IPv6, Annex U.
+  DATALINK_BACNET_IPV6 = 2;
+
+  // MS/TP over RS-485, Clause 9, directly attached.
+  DATALINK_MSTP = 3;
+
+  // BACnet Secure Connect, Annex AB.
+  DATALINK_SECURE_CONNECT = 4;
+}

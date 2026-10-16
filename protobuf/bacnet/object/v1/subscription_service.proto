@@ -1,0 +1,65 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/subscription.proto";
+import "bacnet/object/v1/subscription_messages.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "SubscriptionServiceProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// SubscriptionService follows objects by change of value: subscriptions the device
+// pushes to, and the stream of what it pushes.
+//
+// A device that refuses COV for an object is answered with UNIMPLEMENTED,
+// and the caller polls it instead. That choice stays with the caller: a
+// service that quietly polled behind a subscription would hide the load it
+// puts on a slow MS/TP trunk.
+service SubscriptionService {
+  // The default host serving this API.
+  option (google.api.default_host) = "bacnet.regalium.dev";
+
+  // Subscribes: SubscribeCOV or SubscribeCOVProperty (Clause 13). The
+  // device sends an initial notification with the current value.
+  rpc CreateSubscription(CreateSubscriptionRequest) returns (Subscription) {
+    option (google.api.http) = {
+      post: "/v1/{parent=devices/*/objects/*}/subscriptions"
+      body: "subscription"
+    };
+    option (google.api.method_signature) = "parent,subscription,subscription_id";
+  }
+
+  // Returns one subscription.
+  rpc GetSubscription(GetSubscriptionRequest) returns (Subscription) {
+    option (google.api.http) = {get: "/v1/{name=devices/*/objects/*/subscriptions/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
+  // Lists the subscriptions this service holds.
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse) {
+    option (google.api.http) = {get: "/v1/{parent=devices/*/objects/*}/subscriptions"};
+    option (google.api.method_signature) = "parent";
+  }
+
+  // Cancels a subscription on the device: SubscribeCOV with neither
+  // lifetime nor confirmation, which the standard defines as cancellation.
+  rpc DeleteSubscription(DeleteSubscriptionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/{name=devices/*/objects/*/subscriptions/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
+  // Streams notifications as they arrive, until the caller hangs up. A
+  // slow reader loses the oldest undelivered notifications, never the
+  // newest, and the next response says how many it lost: a live value that
+  // is late is worse than one that is missing.
+  rpc StreamNotifications(StreamNotificationsRequest) returns (stream StreamNotificationsResponse) {
+    option (google.api.http) = {get: "/v1/{parent=devices/*/objects/*}/subscriptions:streamNotifications"};
+  }
+}

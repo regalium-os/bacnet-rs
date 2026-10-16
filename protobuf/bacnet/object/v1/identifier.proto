@@ -1,0 +1,35 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "IdentifierProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// An object identifier, §20.2.14: a type and an instance, packed on the wire
+// into ten bits and twenty-two.
+message ObjectId {
+  // The object type by its name in the standard, `analog-input`, `device`,
+  // `lift`. A type this build does not name is `type-N`: numbers 128 to 1023
+  // are vendor-proprietary, and an enum could not carry them.
+  string object_type = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[a-z][a-z0-9-]*$"
+  ];
+
+  // The instance, 0 to 4194303. 4194303 is the wildcard ("this device")
+  // that a request may use and a reply never does.
+  int32 instance = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 4194303
+    }
+  ];
+}

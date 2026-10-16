@@ -48,6 +48,8 @@ regalium-bacnet-telemetry-otel = { path = "crates/regalium-bacnet-telemetry-otel
 # together with the OpenTelemetry API version the SDK itself is built on.
 telemetry = { git = "https://github.com/the-protobuf-project/telemetry", rev = "884f94d7858df3525fa77f382cbc833c60a76333", version = "1.0.0" }
 opentelemetry = { version = "0.32", default-features = false, features = ["metrics"] }
+prost = { version = "0.14", default-features = false, features = ["std", "derive"] }
+prost-types = { version = "0.14", default-features = false, features = ["std"] }
 
 # Lints are declared once and inherited with `[lints] workspace = true`, so a
 # new crate cannot quietly opt out of them.

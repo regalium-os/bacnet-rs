@@ -1,0 +1,57 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/property.proto";
+import "bacnet/object/v1/property_messages.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "PropertyServiceProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// PropertyService reads and writes any property of any object, standard or
+// proprietary: the generic half of the object model, beneath the typed view
+// ObjectService gives.
+//
+// There is no Create or Delete. The properties an object has are fixed by
+// its type and its vendor; a client can change their values, not their
+// existence.
+service PropertyService {
+  // The default host serving this API.
+  option (google.api.default_host) = "bacnet.regalium.dev";
+
+  // Reads one property: ReadProperty (§15.5).
+  rpc GetProperty(GetPropertyRequest) returns (Property) {
+    option (google.api.http) = {get: "/v1/{name=devices/*/objects/*/properties/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
+  // Lists every property an object has, with its value:
+  // ReadPropertyMultiple of `all` (§15.7), or the property-list property
+  // read and then each property in turn.
+  rpc ListProperties(ListPropertiesRequest) returns (ListPropertiesResponse) {
+    option (google.api.http) = {get: "/v1/{parent=devices/*/objects/*}/properties"};
+    option (google.api.method_signature) = "parent";
+  }
+
+  // Reads several properties of one object in one round trip:
+  // ReadPropertyMultiple (§15.7).
+  rpc BatchGetProperties(BatchGetPropertiesRequest) returns (BatchGetPropertiesResponse) {
+    option (google.api.http) = {get: "/v1/{parent=devices/*/objects/*}/properties:batchGet"};
+  }
+
+  // Writes one property: WriteProperty (§15.9), at write_priority when the
+  // property is a commandable present-value.
+  rpc UpdateProperty(UpdatePropertyRequest) returns (Property) {
+    option (google.api.http) = {
+      patch: "/v1/{property.name=devices/*/objects/*/properties/*}"
+      body: "property"
+    };
+    option (google.api.method_signature) = "property,update_mask";
+  }
+}

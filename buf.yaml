@@ -1,0 +1,29 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# The schema module. protobuf/ is the source of truth for what a device, an
+# object, a property and a COV subscription are; the Rust types and the
+# FlatBuffers and Cap'n Proto mirrors are all generated from it.
+version: v2
+modules:
+  - path: protobuf
+    name: buf.build/regalium-os/bacnet-rs
+lint:
+  use:
+    - STANDARD
+  except:
+    # buf's STANDARD category and Google AIP disagree here, and AIP is the
+    # authority for this schema, as it is in osdp-go.
+    #
+    # AIP-131 requires a standard Get to return the resource itself, not a
+    # GetDeviceResponse wrapper, and AIP-133 and AIP-134 say the same for
+    # Create and Update. Honouring buf would mean near-empty wrapper messages
+    # per resource and a schema that fails the AIP linter CI actually gates on.
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_RESPONSE_STANDARD_NAME
+breaking:
+  use:
+    - FILE
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/bufbuild/protovalidate

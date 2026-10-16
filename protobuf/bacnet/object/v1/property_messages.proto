@@ -1,0 +1,94 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/property.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "PropertyMessagesProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// Request message for PropertyService.GetProperty.
+message GetPropertyRequest {
+  // The property to read.
+  // Format: devices/{device}/objects/{object}/properties/{property}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "bacnet.regalium.dev/Property"
+  ];
+}
+
+// Request message for PropertyService.ListProperties.
+message ListPropertiesRequest {
+  // The object whose properties to read.
+  // Format: devices/{device}/objects/{object}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).child_type = "bacnet.regalium.dev/Property"
+  ];
+
+  // Maximum number of properties to return; zero selects a default.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // A page token from a previous ListProperties call.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for PropertyService.ListProperties.
+message ListPropertiesResponse {
+  // The properties, each with its value or the error that replaced it.
+  repeated Property properties = 1;
+
+  // Pass to the next ListProperties call; empty when there are no more.
+  string next_page_token = 2;
+}
+
+// Request message for PropertyService.BatchGetProperties.
+message BatchGetPropertiesRequest {
+  // The object the properties belong to.
+  // Format: devices/{device}/objects/{object}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).child_type = "bacnet.regalium.dev/Property"
+  ];
+
+  // The properties to read, all beneath parent.
+  repeated string names = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "bacnet.regalium.dev/Property",
+    (buf.validate.field).repeated = {
+      min_items: 1
+      max_items: 100
+    }
+  ];
+}
+
+// Response message for PropertyService.BatchGetProperties.
+message BatchGetPropertiesResponse {
+  // The properties, in the order asked for. One the device refused carries
+  // its error rather than failing the batch, as ReadPropertyMultiple does.
+  repeated Property properties = 1;
+}
+
+// Request message for PropertyService.UpdateProperty.
+message UpdatePropertyRequest {
+  // The property to write. Its name says which, value what, and
+  // write_priority at what priority.
+  Property property = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Only `value` is writable.
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+}

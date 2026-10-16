@@ -1,0 +1,99 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/property.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "SubscriptionProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// A Subscription asks a device to report an object's changes as they
+// happen, rather than be polled for them: SubscribeCOV, or with a property
+// set, SubscribeCOVProperty (Clause 13).
+//
+// The device forgets a subscription when its lifetime lapses, so this
+// service renews each one at three quarters of its lifetime for as long as
+// it exists here. Deleting it cancels it on the device; one left behind by
+// a crash lapses on its own.
+message Subscription {
+  option (google.api.resource) = {
+    type: "bacnet.regalium.dev/Subscription"
+    pattern: "devices/{device}/objects/{object}/subscriptions/{subscription}"
+    singular: "subscription"
+    plural: "subscriptions"
+  };
+
+  // The subscription name.
+  // Format: devices/{device}/objects/{object}/subscriptions/{subscription}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // One property to follow, `present-value`, making this a
+  // SubscribeCOVProperty. Empty follows the object's standard COV
+  // properties, which for a point is present-value and status-flags.
+  string property = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.field_behavior) = IMMUTABLE,
+    (buf.validate.field).string.pattern = "^[a-z][a-z0-9-]*$",
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+
+  // Whether each notification must be acknowledged. Confirmed notifications
+  // make a lost datagram detectable, at the cost of a reply per change.
+  bool confirmed = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.field_behavior) = IMMUTABLE
+  ];
+
+  // How long the device keeps the subscription between renewals. Defaults
+  // to 120 s: long enough to survive a slow renewal, short enough that one
+  // orphaned by a crash stops costing the device within minutes.
+  google.protobuf.Duration lifetime = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // With property set, how far an analog value must move before it is
+  // reported, so a noisy sensor reports real movement rather than its own
+  // last digit. Overrides the object's cov-increment for this subscription.
+  optional double increment = 5 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.field_behavior) = IMMUTABLE,
+    (buf.validate.field).double.gt = 0
+  ];
+
+  // The subscriber process identifier the device knows this subscription
+  // by, chosen by this service, unique per device.
+  int64 process_id = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // When the device will forget it unless renewed.
+  google.protobuf.Timestamp expire_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // When the device first accepted it.
+  google.protobuf.Timestamp create_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// One change-of-value notification, as the device sent it: unconfirmed or
+// confirmed COV notification (Clause 13).
+message Notification {
+  // The subscription it answers.
+  // Format: devices/{device}/objects/{object}/subscriptions/{subscription}
+  string subscription = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference).type = "bacnet.regalium.dev/Subscription"
+  ];
+
+  // The values reported, each a Property beneath the object, with
+  // read_time set to when the notification arrived.
+  repeated Property values = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The time-remaining the device reported: what it believes is left of
+  // the lifetime. A device reporting much less than expected has rebooted
+  // or lost the renewal, and the next renewal will tell.
+  google.protobuf.Duration time_remaining = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

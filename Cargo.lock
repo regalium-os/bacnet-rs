@@ -2308,6 +2308,8 @@ dependencies = [
 name = "regalium-bacnet-schema"
 version = "0.1.0"
 dependencies = [
+ "prost",
+ "prost-types",
  "regalium-bacnet-telemetry",
 ]
 

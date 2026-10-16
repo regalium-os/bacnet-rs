@@ -1,0 +1,106 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.device.v1;
+
+import "bacnet/device/v1/device.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "DeviceMessagesProto";
+option java_package = "dev.regalium.bacnet.device.v1";
+
+// Request message for DeviceService.GetDevice.
+message GetDeviceRequest {
+  // The device to read.
+  // Format: devices/{device}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "bacnet.regalium.dev/Device"
+  ];
+}
+
+// Request message for DeviceService.ListDevices.
+message ListDevicesRequest {
+  // Maximum number of devices to return; zero selects a default.
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // A page token from a previous ListDevices call.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Filter expression, AIP-160: `state = DEVICE_STATE_UNREACHABLE`, or
+  // `vendor_id = 21`.
+  string filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Sort order, AIP-132. Defaults to instance ascending.
+  string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for DeviceService.ListDevices.
+message ListDevicesResponse {
+  // The devices.
+  repeated Device devices = 1;
+
+  // Pass to the next ListDevices call; empty when there are no more.
+  string next_page_token = 2;
+}
+
+// Request message for DeviceService.DeleteDevice.
+message DeleteDeviceRequest {
+  // The device to forget. It is unaffected, and reappears when it next
+  // answers a Who-Is.
+  // Format: devices/{device}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "bacnet.regalium.dev/Device"
+  ];
+}
+
+// Request message for DeviceService.DiscoverDevices.
+//
+// Where the Who-Is goes — a broadcast, swept ranges, a BBMD — is the
+// server's network configuration, not a request field. A caller who could
+// choose the destination could flood a network shared with life-safety
+// equipment; one who can only narrow the instances asked about cannot.
+message DiscoverDevicesRequest {
+  // The lowest device instance to ask for, §16.10.1. Set both limits or
+  // neither: Who-Is carries the range as a pair.
+  optional int32 min_instance = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 4194303
+    }
+  ];
+
+  // The highest device instance to ask for.
+  optional int32 max_instance = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 4194303
+    }
+  ];
+
+  // How long to listen for I-Am. Defaults to three seconds.
+  google.protobuf.Duration wait = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for DeviceService.DiscoverDevices.
+message DiscoverDevicesResponse {
+  // Every device that answered, with what its I-Am carried: instance,
+  // max_apdu_length, segmentation, vendor_id and address. GetDevice reads
+  // the rest.
+  repeated Device devices = 1;
+}

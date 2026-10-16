@@ -1,0 +1,78 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/value.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "PropertyProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// A Property is one property of one object: any of the several hundred the
+// standard defines (Clause 21, BACnetPropertyIdentifier), or one a vendor
+// added at 512 and above.
+//
+// Reading one is ReadProperty (§15.5); reading several is
+// ReadPropertyMultiple (§15.7); writing one is WriteProperty (§15.9). The
+// resource ID is the identifier in the standard's spelling,
+// `present-value`, or `property-N` for one this build does not name.
+message Property {
+  option (google.api.resource) = {
+    type: "bacnet.regalium.dev/Property"
+    pattern: "devices/{device}/objects/{object}/properties/{property}"
+    singular: "property"
+    plural: "properties"
+  };
+
+  // The property name.
+  // Format: devices/{device}/objects/{object}/properties/{property}
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.pattern = "^devices/[0-9]+/objects/[a-z][a-z0-9-]*-[0-9]+/properties/[a-z][a-z0-9-]*$"
+  ];
+
+  // The value, whole: an array property is read and written entire. A
+  // value too large for one reply is the runtime's to read element by
+  // element, not the caller's.
+  Value value = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // The priority to write at, 1 to 16, for the present-value of a
+  // commandable object (§19.2). A null value written at a priority
+  // relinquishes that slot.
+  int32 write_priority = 3 [
+    (google.api.field_behavior) = INPUT_ONLY,
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 1
+      lte: 16
+    },
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+
+  // Why the device would not give the value, when it would not. Set only
+  // in a listing or a batch, where one property refusing must not hide the
+  // others; a single Get returns the error itself.
+  PropertyError error = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // When the value was read from the device.
+  google.protobuf.Timestamp read_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// A BACnet Error, Clause 18: a class and a code, both in the standard's
+// spelling, `property` and `unknown-property`. Vendors may extend both, so
+// neither is an enum.
+message PropertyError {
+  // The error class: `device`, `object`, `property`, `resources`,
+  // `security`, `services`, `communication`.
+  string error_class = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The error code within the class.
+  string error_code = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

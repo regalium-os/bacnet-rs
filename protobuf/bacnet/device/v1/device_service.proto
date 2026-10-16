@@ -1,0 +1,55 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.device.v1;
+
+import "bacnet/device/v1/device.proto";
+import "bacnet/device/v1/device_messages.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "DeviceServiceProto";
+option java_package = "dev.regalium.bacnet.device.v1";
+
+// DeviceService finds BACnet devices and reads what they say about
+// themselves.
+//
+// It is the discovery half of the API. The collection is what Who-Is has
+// found, kept so that a device going quiet shows as unreachable rather than
+// vanishing; a device's own properties are read from it, never stored and
+// served stale.
+service DeviceService {
+  // The default host serving this API.
+  option (google.api.default_host) = "bacnet.regalium.dev";
+
+  // Reads one device: its Device object's properties (§12.11), through
+  // ReadPropertyMultiple where the device has it.
+  rpc GetDevice(GetDeviceRequest) returns (Device) {
+    option (google.api.http) = {get: "/v1/{name=devices/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
+  // Lists the devices discovery has found, reachable or not.
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {
+    option (google.api.http) = {get: "/v1/devices"};
+  }
+
+  // Forgets a device. Nothing is sent to it.
+  rpc DeleteDevice(DeleteDeviceRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/{name=devices/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
+  // Sends Who-Is (§16.10) and returns the devices that answer with I-Am,
+  // adding them to the collection.
+  rpc DiscoverDevices(DiscoverDevicesRequest) returns (DiscoverDevicesResponse) {
+    option (google.api.http) = {
+      post: "/v1/devices:discover"
+      body: "*"
+    };
+  }
+}

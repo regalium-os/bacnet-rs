@@ -1,0 +1,78 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/object.proto";
+import "bacnet/object/v1/object_messages.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "ObjectServiceProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// ObjectService reads and changes the objects in a device's database.
+//
+// Unlike a record kept by this service, an Object is the device's own: every
+// method is a BACnet request sent to the device, and every answer is what the
+// device said. A device that does not implement a service answers with a
+// reject, and that comes back as UNIMPLEMENTED rather than being emulated.
+service ObjectService {
+  // The default host serving this API.
+  option (google.api.default_host) = "bacnet.regalium.dev";
+
+  // Reads one object: ReadPropertyMultiple (§15.7) of the properties an
+  // Object carries, or ReadProperty of each where the device lacks it.
+  rpc GetObject(GetObjectRequest) returns (Object) {
+    option (google.api.http) = {get: "/v1/{name=devices/*/objects/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
+  // Lists a device's objects: its object-list property (§12.11), read by
+  // index where whole would not fit, then each object as GetObject reads it.
+  rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse) {
+    option (google.api.http) = {get: "/v1/{parent=devices/*}/objects"};
+    option (google.api.method_signature) = "parent";
+  }
+
+  // Creates an object in a device's database: CreateObject (§15.3).
+  rpc CreateObject(CreateObjectRequest) returns (Object) {
+    option (google.api.http) = {
+      post: "/v1/{parent=devices/*}/objects"
+      body: "object"
+    };
+    option (google.api.method_signature) = "parent,object,object_id";
+  }
+
+  // Writes an object's writable fields: WritePropertyMultiple (§15.10), or
+  // WriteProperty (§15.9) of each where the device lacks it. A write that
+  // fails part-way says which property refused; the earlier ones stand,
+  // because BACnet has no transaction to roll them back.
+  rpc UpdateObject(UpdateObjectRequest) returns (Object) {
+    option (google.api.http) = {
+      patch: "/v1/{object.name=devices/*/objects/*}"
+      body: "object"
+    };
+    option (google.api.method_signature) = "object,update_mask";
+  }
+
+  // Deletes an object from a device's database: DeleteObject (§15.4).
+  // Devices refuse to delete the objects their configuration depends on.
+  rpc DeleteObject(DeleteObjectRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/{name=devices/*/objects/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
+  // Finds which device holds an object, by identifier or name: Who-Has and
+  // I-Have (§16.9). The way to locate a point whose device is unknown.
+  rpc FindObjects(FindObjectsRequest) returns (FindObjectsResponse) {
+    option (google.api.http) = {
+      post: "/v1/{parent=devices/*}/objects:find"
+      body: "*"
+    };
+  }
+}

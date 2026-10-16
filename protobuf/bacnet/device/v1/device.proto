@@ -1,0 +1,116 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.device.v1;
+
+import "bacnet/device/v1/enums.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "DeviceProto";
+option java_package = "dev.regalium.bacnet.device.v1";
+
+// A Device is one BACnet device: a controller, a gateway, a lift. Every
+// device holds exactly one Device object (§12.11), and its instance number
+// is unique across the internetwork, which is why it is the resource ID —
+// `devices/599` names the same device on any network it is reached over.
+//
+// Devices enter this collection by being discovered (DiscoverDevices) and
+// are never created through it: a device exists because it is on the wire.
+message Device {
+  option (google.api.resource) = {
+    type: "bacnet.regalium.dev/Device"
+    pattern: "devices/{device}"
+    singular: "device"
+    plural: "devices"
+  };
+
+  // The device name.
+  // Format: devices/{device}
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.pattern = "^devices/[0-9]+$"
+  ];
+
+  // The device instance, 0 to 4194302.
+  int32 instance = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The object-name property of its Device object.
+  string display_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The description property.
+  string description = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The location property: where the installer said it is.
+  string location = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The vendor-name property.
+  string vendor = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The vendor-identifier property: ASHRAE's registry number for the
+  // vendor, which is what a vendor profile keys on.
+  int32 vendor_id = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The model-name property.
+  string model = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The firmware-revision property.
+  string firmware_revision = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The application-software-version property.
+  string application_software_version = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The protocol-revision property: which edition of the standard the
+  // device claims. Revision 12 and revision 19 lift controllers have
+  // different object models, and this is how a profile tells them apart.
+  int32 protocol_revision = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The max-apdu-length-accepted property, in octets: 50 to 1476. A request
+  // is sized to fit it.
+  int32 max_apdu_length = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The segmentation-supported property.
+  Segmentation segmentation = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The system-status property, `operational`, `download-in-progress`, in
+  // the standard's spelling; vendors may extend it, so it is not an enum.
+  string system_status = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // How it is reached.
+  Address address = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Whether it answered last time.
+  DeviceState state = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The number of objects in its object-list.
+  int32 object_count = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // When it first answered a Who-Is.
+  google.protobuf.Timestamp discover_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // When it last answered anything.
+  google.protobuf.Timestamp last_seen_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Where a device is on the internetwork, Clause 6.
+message Address {
+  // The datalink the request leaves on.
+  Datalink datalink = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Where datagrams go: the device's own IP endpoint, or the router's for a
+  // device behind one. `10.0.0.5:47808`, `[fe80::1]:47808`.
+  string endpoint = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The BACnet network number, 1 to 65534, for a device behind a router;
+  // zero for one on the local network.
+  int32 network_number = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Its MAC address on that network: one octet on MS/TP, three (a virtual
+  // MAC) on BACnet/IPv6. Empty on the local network, where endpoint says it.
+  bytes mac_address = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

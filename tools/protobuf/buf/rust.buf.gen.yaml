@@ -1,0 +1,25 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Rust types for the schema crate, from the protobuf module.
+#
+# Local plugins rather than remote ones: the output is committed, so it has
+# to be reproducible from a checkout, and a remote plugin's version is
+# whatever the registry serves that day. `just gen rust` names the versions.
+version: v2
+clean: true
+inputs:
+  - directory: protobuf
+plugins:
+  # Messages and enums. Well-known types map onto prost-types, which is
+  # already in the graph through the telemetry SDK.
+  - local: protoc-gen-prost
+    out: crates/regalium-bacnet-schema/src/generated
+    opt:
+      - enable_type_names
+  # The module tree that includes them, so the crate's lib.rs names one file.
+  - local: protoc-gen-prost-crate
+    out: crates/regalium-bacnet-schema/src/generated
+    strategy: all
+    opt:
+      - no_features

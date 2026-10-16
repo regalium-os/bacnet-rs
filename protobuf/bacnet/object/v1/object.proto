@@ -1,0 +1,133 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/value.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "ObjectProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// An Object is one BACnet object in a device's database: an analog input, a
+// binary output, a schedule, a lift. ASHRAE 135 Clause 12 defines the types;
+// a device's object-list property names the ones it has.
+//
+// This message is the typed view of what most objects share: the properties
+// an operator reads first and the few a client writes. Every other property
+// of every type, standard or proprietary, is a Property beneath this one.
+// That split is what keeps the schema finite while the standard is not.
+//
+// The resource ID is the object identifier in the standard's own spelling,
+// `analog-input-1`, `type-130-7` for a type this build does not name, so a
+// name read off a screen or a PICS document is the name in a URL.
+message Object {
+  option (google.api.resource) = {
+    type: "bacnet.regalium.dev/Object"
+    pattern: "devices/{device}/objects/{object}"
+    singular: "object"
+    plural: "objects"
+  };
+
+  // The object name.
+  // Format: devices/{device}/objects/{object}
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.pattern = "^devices/[0-9]+/objects/[a-z][a-z0-9-]*-[0-9]+$",
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+
+  // The object type, `analog-input`. Required to create one, since a device
+  // may choose the instance (CreateObject, §15.3) but never the type.
+  string object_type = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.field_behavior) = IMMUTABLE,
+    (buf.validate.field).string.pattern = "^[a-z][a-z0-9-]*$"
+  ];
+
+  // The instance number, chosen by the client or by the device.
+  int32 instance = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The object-name property: unique within the device, and what an
+  // operator calls the point. Some devices refuse to rename an object.
+  string display_name = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // The description property, when the object has one.
+  string description = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // The present-value property. Writing it to a commandable object writes
+  // at write_priority (§19.2): the value then takes effect only if no slot
+  // of higher priority holds one.
+  Value present_value = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // The priority to write present_value at, 1 (manual life safety) to 16
+  // (the default). Ignored for an object that is not commandable.
+  int32 write_priority = 7 [
+    (google.api.field_behavior) = INPUT_ONLY,
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 1
+      lte: 16
+    },
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+
+  // The priority-array property of a commandable object (§19.2): sixteen
+  // slots, highest priority first, null where a slot is relinquished. Which
+  // slot holds a value is the answer to "why will this fan not stop".
+  repeated Value priority_array = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The units property in the standard's spelling, `degrees-celsius`, or
+  // `units-N` for one this build does not name (256 and up are proprietary).
+  string units = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The names of the present-value's states: inactive-text and active-text
+  // for a binary object, state-text for a multi-state one, numbered from 1.
+  // Empty for an analog object. This is what turns "3" into "Independent".
+  repeated string state_texts = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The status-flags property.
+  StatusFlags status_flags = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The event-state property, `normal`, `offnormal`, `fault`, in the
+  // standard's spelling; vendors may extend it, so it is not an enum.
+  string event_state = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The reliability property, `no-fault-detected` or the reason the value
+  // cannot be trusted. Absent on objects without one.
+  string reliability = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The out-of-service property. While true the object is isolated from
+  // its physical point: present_value is decoupled from it and may be
+  // written, which is how a commissioning engineer tests logic without
+  // moving the plant. Named for what it does because AIP-140 forbids the
+  // preposition in the standard's name.
+  bool isolated = 14 [(google.api.field_behavior) = OPTIONAL];
+
+  // When these values were read from the device.
+  google.protobuf.Timestamp read_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// The status-flags property: four bits every point object carries, named
+// here without the prepositions AIP-140 forbids.
+message StatusFlags {
+  // IN_ALARM: event-state is not normal.
+  bool alarm = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // FAULT: reliability is not no-fault-detected, so the value is not to be
+  // trusted.
+  bool fault = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // OVERRIDDEN: something local to the device, such as a hand-off-auto
+  // switch, has taken the point.
+  bool overridden = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // OUT_OF_SERVICE: the object's isolated field is true.
+  bool isolated = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

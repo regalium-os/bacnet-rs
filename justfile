@@ -85,7 +85,31 @@ api-lint:
         echo "no .proto yet; the schema tree is populated in Phase 9"
         exit 0
     fi
-    cd protobuf && api-linter --set-exit-status $(find . -name '*.proto')
+    # Through a buf image, as CI does: the schema imports googleapis and
+    # protovalidate, which buf resolves and the linter alone cannot.
+    image="$(mktemp -t bacnet-image.XXXXXX)"
+    trap 'rm -f "$image"' EXIT
+    buf lint
+    buf format --diff --exit-code
+    buf build -o "$image"
+    cd protobuf && api-linter --set-exit-status --descriptor-set-in "$image" \
+        $(find . -name '*.proto')
+
+# --- codegen ---------------------------------------------------------------
+
+# Regenerate the schema crate's Rust types from protobuf/. The output is
+# committed, so a consumer builds without buf or protoc.
+[group('codegen')]
+[doc('Regenerate the schema crate from protobuf/')]
+gen:
+    buf generate --template tools/protobuf/buf/rust.buf.gen.yaml
+
+# Fails when the committed types are not what protobuf/ generates: a .proto
+# edited without `just gen` ships a crate that disagrees with its schema.
+[group('codegen')]
+[doc('Fail if the generated Rust is stale')]
+gen-check: gen
+    git diff --exit-code -- crates/regalium-bacnet-schema/src/generated
 
 # --- build -----------------------------------------------------------------
 
