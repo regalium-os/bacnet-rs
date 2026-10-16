@@ -13,7 +13,10 @@
 mod jobs;
 mod live;
 mod queue;
+mod reopen;
 
+use crate::args::Net;
+use crate::connect::Connector;
 use bacnet_probe::scan::ObjectReport;
 use bacnet_probe::{Client, Device, Direction, Discovery, ObjectId, Value};
 use std::collections::{HashMap, VecDeque};
@@ -35,6 +38,9 @@ pub(crate) enum Command {
     Watch(Option<(Device, Vec<ObjectId>)>),
     /// Poll interval for points without a subscription.
     SetInterval(Duration),
+    /// Reopen the socket with these options, then rediscover; answered by
+    /// `Connected` or `ConnectFailed`.
+    Reconfigure(Net),
 }
 
 /// What the worker reports.
@@ -56,6 +62,11 @@ pub(crate) enum Event {
     },
     Packet(Packet),
     Log(String),
+    /// Reopened with the requested options, and discovering through them;
+    /// what a person should know about how (its address, a registration).
+    Connected(Vec<String>),
+    /// The requested options could not be opened; the previous ones stand.
+    ConnectFailed(String),
 }
 
 /// One datagram, as the trace saw it.
@@ -91,6 +102,9 @@ pub(crate) struct Worker {
     /// Each loaded point's name and units, so a live value is recorded on
     /// exactly the series its scan was.
     labels: HashMap<(u32, ObjectId), (String, Option<u32>)>,
+    /// The options the socket was opened with, and how to open others;
+    /// without it a `Reconfigure` is refused.
+    reopen: Option<(Net, Connector)>,
     closed: bool,
 }
 
@@ -102,18 +116,8 @@ impl Worker {
         commands: Receiver<Command>,
         events: Sender<Event>,
     ) -> Self {
-        let packets = events.clone();
-        let client = client.with_trace(move |direction, peer, bytes| {
-            let packet = Packet {
-                at: Instant::now(),
-                direction,
-                peer,
-                bytes: bytes.to_vec(),
-            };
-            let _ = packets.send(Event::Packet(packet));
-        });
         Self {
-            client,
+            client: traced(client, &events),
             plan,
             commands,
             events,
@@ -121,6 +125,7 @@ impl Worker {
             live: live::Live::default(),
             names: HashMap::new(),
             labels: HashMap::new(),
+            reopen: None,
             closed: false,
         }
     }
@@ -158,12 +163,27 @@ impl Worker {
             Command::LoadDetail(device, id) => self.load_detail(&device, id),
             Command::Watch(w) => self.live.want(w),
             Command::SetInterval(d) => self.live.interval = d,
+            Command::Reconfigure(net) => self.reconfigure(net),
         }
     }
 
     fn emit(&self, event: Event) {
         let _ = self.events.send(event);
     }
+}
+
+/// `client`, reporting every datagram as an `Event::Packet`.
+fn traced(client: Client, events: &Sender<Event>) -> Client {
+    let packets = events.clone();
+    client.with_trace(move |direction, peer, bytes| {
+        let packet = Packet {
+            at: Instant::now(),
+            direction,
+            peer,
+            bytes: bytes.to_vec(),
+        };
+        let _ = packets.send(Event::Packet(packet));
+    })
 }
 
 #[cfg(test)]

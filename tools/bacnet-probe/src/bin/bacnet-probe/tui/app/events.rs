@@ -50,6 +50,8 @@ impl App {
             }
             Event::Following { cov, polled } => self.following = Some((cov, polled)),
             Event::Log(line) => self.log(line),
+            Event::Connected(notes) => self.connected(notes),
+            Event::ConnectFailed(error) => return self.connect_failed(error),
         }
         Vec::new()
     }

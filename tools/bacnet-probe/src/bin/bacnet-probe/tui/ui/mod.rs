@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Drawing: the frame (tabs, status, key hints). The Browse tab is in
-//! `browse`; the Packets and Log tabs and the help overlay in `more`.
+//! `browse`; the Packets and Log tabs and the help overlay in `more`; the
+//! Settings tab in `settings`.
 
 mod browse;
 mod more;
+mod settings;
 
 use super::app::{App, Load, Tab};
 use ratatui::Frame;
@@ -30,6 +32,7 @@ pub(crate) fn draw(frame: &mut Frame<'_>, app: &mut App) {
         Tab::Browse => browse::browse(frame, app, body),
         Tab::Packets => more::packets(frame, app, body),
         Tab::Log => more::log(frame, app, body),
+        Tab::Settings => settings::settings(frame, app, body),
     }
     footer(frame, app, bottom);
     if app.help {
@@ -38,16 +41,17 @@ pub(crate) fn draw(frame: &mut Frame<'_>, app: &mut App) {
 }
 
 fn header(frame: &mut Frame<'_>, app: &App, area: Rect) {
-    let tabs = Tabs::new(["1 Browse", "2 Packets", "3 Log"])
+    let tabs = Tabs::new(["1 Browse", "2 Packets", "3 Log", "4 Settings"])
         .select(match app.tab {
             Tab::Browse => 0,
             Tab::Packets => 1,
             Tab::Log => 2,
+            Tab::Settings => 3,
         })
         .highlight_style(Style::new().fg(Color::Black).bg(Color::Cyan).bold())
         .divider(" ");
     let [left, right] =
-        Layout::horizontal([Constraint::Length(30), Constraint::Min(0)]).areas(area);
+        Layout::horizontal([Constraint::Length(44), Constraint::Min(0)]).areas(area);
     frame.render_widget(tabs, left);
     let watch = match (app.watching, app.following) {
         (false, _) => "live off".into(),
@@ -95,6 +99,7 @@ fn footer(frame: &mut Frame<'_>, app: &App, area: Rect) {
         ("enter", "reload"),
         ("r", "discover"),
         ("w", "live"),
+        ("s", "settings"),
         ("q", "quit"),
     ] {
         spans.push(Span::raw(format!(" {key} ")).bold().fg(Color::Cyan));

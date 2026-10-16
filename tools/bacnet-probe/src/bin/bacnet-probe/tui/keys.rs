@@ -1,8 +1,9 @@
 // Copyright 2026 RegaliumOS™.
 // SPDX-License-Identifier: Apache-2.0
 
-//! Key bindings. Every binding is listed in `HELP`, which the help overlay
-//! renders, so the two cannot drift apart.
+//! Key bindings. Every binding is listed in `HELP`, or for the Settings tab
+//! in `settings::edit::KEYS`; the help overlay renders both, so neither can
+//! drift from what the keys do.
 
 use super::app::{App, Focus, Tab};
 use super::worker::Command;
@@ -24,7 +25,8 @@ fn moved(at: usize, delta: isize, len: usize) -> usize {
 }
 
 pub(crate) const HELP: &[(&str, &str)] = &[
-    ("1 2 3", "Browse / Packets / Log tab"),
+    ("1 2 3 4", "Browse / Packets / Log / Settings tab"),
+    ("s", "Settings: target, port, scan ranges, BBMD, timing"),
     ("Tab, ← →", "move focus: devices, objects, properties"),
     ("↑ ↓  j k", "move selection"),
     ("PgUp PgDn", "move ten rows"),
@@ -58,12 +60,16 @@ impl App {
             );
             return Vec::new();
         }
+        if let Some(commands) = self.settings_key(key) {
+            return commands;
+        }
         match key.code {
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char('?') => self.help = true,
             KeyCode::Char('1') => self.tab = Tab::Browse,
             KeyCode::Char('2') => self.tab = Tab::Packets,
             KeyCode::Char('3') => self.tab = Tab::Log,
+            KeyCode::Char('4' | 's') => self.tab = Tab::Settings,
             KeyCode::Char('r') => return vec![Command::Discover],
             KeyCode::Char('w') => {
                 self.watching = !self.watching;
@@ -82,7 +88,7 @@ impl App {
                     self.packet_table = TableState::default();
                 }
                 Tab::Log => self.log.clear(),
-                Tab::Browse => {}
+                Tab::Browse | Tab::Settings => {}
             },
             KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => return self.focus_by(1),
             KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => return self.focus_by(-1),
@@ -98,8 +104,10 @@ impl App {
         Vec::new()
     }
 
-    fn set_interval(&mut self, interval: Duration) -> Vec<Command> {
-        self.interval = interval.clamp(Duration::from_millis(250), Duration::from_secs(60));
+    pub(crate) fn set_interval(&mut self, interval: Duration) -> Vec<Command> {
+        let (low, high) = super::settings::INTERVAL;
+        self.interval = interval.clamp(low, high);
+        self.settings.sync_interval(self.interval);
         self.log(format!("polling every {:?}", self.interval));
         vec![Command::SetInterval(self.interval)]
     }
@@ -159,6 +167,7 @@ impl App {
                 self.follow = false;
                 move_in(&mut self.packet_table, self.packets.len());
             }
+            Tab::Settings => {}
             Tab::Log => {
                 // Scrolled is lines back from the newest; up goes further back.
                 self.log_scroll = moved(self.log_scroll, -delta, self.log.len() + 1);

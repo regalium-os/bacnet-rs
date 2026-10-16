@@ -187,3 +187,4 @@ fn the_poll_interval_is_clamped() {
 }
 
 mod render;
+mod settings;

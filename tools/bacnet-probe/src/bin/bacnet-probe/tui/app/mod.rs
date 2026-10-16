@@ -4,10 +4,12 @@
 //! TUI state. Pure: events and keys go in, worker commands come out, so the
 //! whole interaction is testable without a terminal or a network.
 
+use super::settings::Form;
 use super::worker::{Command, Packet};
 
 mod events;
 mod select;
+mod settings;
 use bacnet_probe::scan::ObjectReport;
 use bacnet_probe::{Device, ObjectId};
 use ratatui::widgets::TableState;
@@ -29,6 +31,7 @@ pub(crate) enum Tab {
     Browse,
     Packets,
     Log,
+    Settings,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -77,12 +80,15 @@ pub(crate) struct App {
     pub(crate) following: Option<(usize, usize)>,
     pub(crate) watching: bool,
     pub(crate) interval: Duration,
+    /// The Settings tab: the network options, editable.
+    pub(crate) settings: Form,
     pub(crate) help: bool,
     pub(crate) quit: bool,
 }
 
 impl App {
-    /// A fresh app and the commands that start it: a Who-Is.
+    /// A fresh app and the commands that start it: a Who-Is. Its settings
+    /// are the defaults until [`App::configured`] says otherwise.
     pub(crate) fn new(target: String) -> (Self, Vec<Command>) {
         let app = Self {
             target,
@@ -104,6 +110,7 @@ impl App {
             following: None,
             watching: true,
             interval: Duration::from_secs(2),
+            settings: Form::new(crate::args::defaults(), Duration::from_secs(2)),
             help: false,
             quit: false,
         };

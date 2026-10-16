@@ -151,5 +151,9 @@ assert_eq!(apdu.encode_to_vec(), apdu_bytes);
 let client = Client::over(MsTp::open("/dev/ttyUSB0", Baud::B38400, MacAddress(3))?).await?;
 ```
 
+BACnet/IPv6 is constructed the same way, with an interface to join the
+multicast group on and a virtual MAC address; what Annex U asks of it that
+Annex J does not is in [ipv6.md](ipv6.md).
+
 A datalink is a trait the core declares and each crate satisfies, so a
 proprietary bridge is implemented outside this repository without changing it.

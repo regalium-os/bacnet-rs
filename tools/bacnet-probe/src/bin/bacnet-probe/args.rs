@@ -7,7 +7,7 @@
 use crate::cli;
 use bacnet_probe::Scope;
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::time::Duration;
 
 #[derive(Parser)]
@@ -37,11 +37,12 @@ Without hardware:
   cargo run -p regalium-bacnet-probe --example sim_device
   bacnet-probe --target 127.0.0.1 --port 47809 --bind 127.0.0.1:0";
 
-/// Where and how to talk `BACnet`/IP.
-#[derive(Args, Clone, Debug)]
+/// Where and how to talk `BACnet`/IP. Equality is what the TUI's settings
+/// tab compares to decide whether an edit needs the socket rebound.
+#[derive(Args, Clone, Debug, PartialEq)]
 pub(crate) struct Net {
     /// Where Who-Is goes: a broadcast (subnet .255) or one device/router IP.
-    #[arg(long, global = true, default_value = "255.255.255.255")]
+    #[arg(long, global = true, default_value = "255.255.255.255", value_parser = parse_ipv4)]
     pub(crate) target: Ipv4Addr,
     /// Sweep these ranges instead of --target, and accept answers only from
     /// them: 192.168.*, 10.1.0.0/16, or one address. Repeatable.
@@ -65,14 +66,15 @@ pub(crate) struct Net {
     #[arg(long, global = true, default_value_t = 47808)]
     pub(crate) port: u16,
     /// Local socket [default: 0.0.0.0:<port>, else an ephemeral port].
-    #[arg(long, global = true)]
+    #[arg(long, global = true, value_parser = parse_bind)]
     pub(crate) bind: Option<SocketAddr>,
     /// Seconds to collect I-Am replies.
     #[arg(long, global = true, default_value = "3", value_parser = seconds)]
     pub(crate) wait: Duration,
-    /// Seconds to wait for each reply before retrying.
-    #[arg(long, global = true, default_value = "2", value_parser = seconds)]
-    pub(crate) timeout: Duration,
+    /// Seconds to wait for each reply before retrying [default: 2, or 1 in
+    /// the TUI, where a dead device should cost a second].
+    #[arg(long, global = true, value_parser = seconds)]
+    pub(crate) timeout: Option<Duration>,
     /// Dissect every packet sent and received to stderr (subcommands only).
     #[arg(long, global = true)]
     pub(crate) explain: bool,
@@ -128,13 +130,50 @@ pub(crate) fn seconds(s: &str) -> Result<Duration, String> {
     Duration::try_from_secs_f64(secs).map_err(|e| e.to_string())
 }
 
-fn parse_bbmd(s: &str) -> Result<SocketAddr, String> {
+/// The options exactly as they are when none is given, from clap itself so
+/// the TUI's "reset to defaults" cannot drift from `--help`.
+pub(crate) fn defaults() -> Net {
+    Cli::parse_from(["bacnet-probe"]).net
+}
+
+/// An IPv4 address. `BACnet`/IPv6 is not this datalink with a wider address:
+/// it is Annex U, with no broadcast and a virtual MAC layer, so an IPv6
+/// address is refused by name rather than half-used.
+pub(crate) fn parse_ipv4(s: &str) -> Result<Ipv4Addr, String> {
+    s.trim().parse().map_err(|_| not_ipv4(s, "an IPv4 address"))
+}
+
+/// A local IPv4 socket, `0.0.0.0:47808`.
+pub(crate) fn parse_bind(s: &str) -> Result<SocketAddr, String> {
+    s.trim()
+        .parse::<SocketAddr>()
+        .ok()
+        .filter(SocketAddr::is_ipv4)
+        .ok_or_else(|| not_ipv4(s, "an IPv4 IP:PORT, e.g. 0.0.0.0:47808"))
+}
+
+/// A BBMD: `IP` (port 47808) or `IP:PORT`, IPv4.
+pub(crate) fn parse_bbmd(s: &str) -> Result<SocketAddr, String> {
+    let s = s.trim();
     s.parse::<SocketAddr>()
-        .or_else(|_| {
-            s.parse::<Ipv4Addr>()
-                .map(|ip| SocketAddr::from((ip, 47808)))
-        })
-        .map_err(|_| format!("{s:?}: expected an IPv4 address, optionally with :port"))
+        .ok()
+        .or_else(|| s.parse::<Ipv4Addr>().ok().map(|ip| (ip, 47808).into()))
+        .filter(SocketAddr::is_ipv4)
+        .ok_or_else(|| not_ipv4(s, "an IPv4 address, optionally with :port"))
+}
+
+fn not_ipv4(s: &str, expected: &str) -> String {
+    let bare = s
+        .trim()
+        .trim_start_matches('[')
+        .split(']')
+        .next()
+        .unwrap_or_default();
+    if bare.parse::<Ipv6Addr>().is_ok() {
+        format!("{s:?} is IPv6; BACnet/IPv6 (Annex U) is not supported yet, expected {expected}")
+    } else {
+        format!("{s:?}: expected {expected}")
+    }
 }
 
 fn parse_otlp(s: &str) -> Result<(String, u16), String> {

@@ -13,6 +13,7 @@
 
 mod args;
 mod cli;
+mod connect;
 mod tui;
 
 use args::{Cli, Cmd, Net, Telemetry};
@@ -20,7 +21,6 @@ use bacnet_probe::Client;
 use clap::Parser;
 use regalium_bacnet_telemetry::{Meter, NoopMeter};
 use regalium_bacnet_telemetry_otel::Otel;
-use std::net::SocketAddr;
 use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
@@ -79,52 +79,29 @@ fn telemetry(t: &Telemetry) -> Result<Otel> {
 }
 
 fn tui(net: &Net, meter: Arc<dyn Meter>, interval: Duration) -> Result {
-    // Short timeouts: in a UI, a dead device should cost a second, not six.
-    let mut client = bind(net, false)?
-        .with_timeout(Duration::from_secs(1))
-        .with_retries(1)
-        .with_meter(meter);
-    register(&mut client, net)?;
-    let label = if net.scan.is_empty() {
-        net.target.to_string()
-    } else {
-        cli::scopes(&net.scan)
-    };
-    Ok(tui::run(client, cli::plan(net)?, label, interval)?)
+    let opened = connect::for_tui(net, Arc::clone(&meter))?;
+    Ok(tui::run(
+        opened,
+        net.clone(),
+        interval,
+        connect::tui_connector(meter),
+    )?)
 }
 
 fn connect(net: &Net, meter: Arc<dyn Meter>) -> Result<Client> {
-    let mut client = bind(net, true)?.with_timeout(net.timeout).with_meter(meter);
+    let timeout = net.timeout.unwrap_or(Duration::from_secs(2));
+    let mut notes = Vec::new();
+    let mut client = connect::bind(net, &mut notes)?
+        .with_timeout(timeout)
+        .with_meter(meter);
+    for n in &notes {
+        eprintln!("note: {n}");
+    }
     if net.explain {
         client = client.with_trace(cli::print_packet);
     }
-    register(&mut client, net)?;
+    if let Some(registered) = connect::register(&mut client, net)? {
+        eprintln!("{registered}");
+    }
     Ok(client)
-}
-
-/// Registers with `--bbmd`, if given, before anything is sent.
-fn register(client: &mut Client, net: &Net) -> Result {
-    if let Some(bbmd) = net.bbmd {
-        client
-            .register_foreign_device(bbmd, net.ttl)
-            .map_err(|e| format!("--bbmd {bbmd}: {e}"))?;
-        eprintln!(
-            "registered as a foreign device with {bbmd} for {} s",
-            net.ttl
-        );
-    }
-    Ok(())
-}
-
-fn bind(net: &Net, chatty: bool) -> std::io::Result<Client> {
-    if let Some(addr) = net.bind {
-        return Client::bind(addr);
-    }
-    // Many devices broadcast I-Am to port 47808, so prefer to own it.
-    Client::bind(SocketAddr::from(([0, 0, 0, 0], net.port))).or_else(|e| {
-        if chatty {
-            eprintln!("note: cannot bind :{} ({e}); using an ephemeral port, so broadcast I-Ams may be missed", net.port);
-        }
-        Client::bind(SocketAddr::from(([0, 0, 0, 0], 0)))
-    })
 }

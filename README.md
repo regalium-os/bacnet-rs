@@ -5,20 +5,39 @@ building automation protocol that HVAC plant, lighting, metering, access
 control and lift equipment speak to each other.
 
 It is a library and a runtime, not an application: no global state, no hidden
-threads, and no clock the core reads behind your back.
+threads, and no clock the core reads behind your back. It is built to be
+imported by software that must keep talking to lift controllers for years.
 
-> **Status: Phase 0.** The workspace, the layer contracts and the conformance
-> gates exist and are enforced. **No frame decodes yet.** The code below is the
-> target API, written down so its shape can be argued with before it is built.
-> The tag codec and the first fixture corpus land in Phase 3; the first live
-> read in Phase 8. See [State](#state).
+> **Status.** Phase 0 is complete: the workspace, the layer contracts and the
+> conformance gates exist and are enforced. The **field probe ships today**.
+> The driver itself **decodes no frame yet**: the code below is the target
+> API, written down so its shape can be argued with before it is built. The
+> tag codec lands in Phase 3, the first live read in Phase 8.
+
+## Features
+
+| Area | Covers | State |
+| --- | --- | --- |
+| Core | tags, the 13 primitive types, APDU, NPDU, services, object model, transaction state machine — sans-io, lossless | Phases 3–6 |
+| BACnet/IP | Annex J: BVLL, BBMD, foreign device registration | Phase 7 |
+| Runtime | discovery, polling, COV lifecycle, reconnection, offline as an event | Phase 8 |
+| Schema | `protobuf/` per Google AIP; prost, FlatBuffers and Cap'n Proto | Phase 9 |
+| MS/TP | Clause 9 master node over RS-485 | planned |
+| BACnet/SC | Annex AB, WebSocket and TLS, hub and direct | planned |
+| **BACnet/IPv6** | Annex U: multicast, virtual MAC addresses, BBMD — **[the full list](docs/ipv6.md)** | planned |
+| Telemetry | metrics seam and OTLP export; spans with Phase 3 | **built** in part |
+| Field probe | discover, browse, watch, export, dissect; TUI with live settings | **built** |
+| Gates | size, licence, purity, layering, dependencies — each proven to bite | **built** |
+
+Every crate's features, and the order they come in, are in
+**[docs/roadmap.md](docs/roadmap.md)**.
 
 ## Why another BACnet stack
 
 BACnet stacks tend to fuse the codec to a socket and a clock. That makes the
 interesting failures — a retry storm, a segmented response that never
-completes, a device that goes quiet mid-transaction — reproducible only against
-hardware, which means they are not reproduced at all.
+completes, a device that goes quiet mid-transaction — reproducible only
+against hardware, which means they are not reproduced at all.
 
 **The core is sans-io.** It is handed octets and a timestamp and returns what
 should happen next:
@@ -33,23 +52,13 @@ match tsm.poll(clock.now()) {
 ```
 
 Nothing there opens a socket or reads a clock, so a full timeout, retry,
-segmentation and abandon sequence is a table test on a fake clock — no
-hardware, no network, no sleeping test suite. The runtime is the only thing
-that waits.
+segmentation and abandon sequence is a table test on a fake clock. The
+runtime is the only thing that waits.
 
 **Decoding is lossless.** Decode then re-encode reproduces the input byte for
-byte, *including* a malformed length or a reserved bit:
-
-```rust
-let (npdu, apdu_bytes) = Npdu::decode(&bvlc.payload)?;
-let apdu = Apdu::decode(apdu_bytes)?;
-
-assert_eq!(apdu.encode_to_vec(), apdu_bytes);
-```
-
-Equipment that does not follow the standard is the normal case. A stack that
-quietly normalises what a controller actually sent hides the reason a site does
-not work.
+byte, *including* a malformed length or a reserved bit. Equipment that does
+not follow the standard is the normal case, and a stack that quietly
+normalises what a controller sent hides the reason a site does not work.
 
 ## A first look
 
@@ -84,8 +93,8 @@ async fn main() -> Result<(), regalium_bacnet::Error> {
 }
 ```
 
-`ReadPropertyMultiple`, serving as a local device, driving the core without the
-runtime, and the other datalinks are in **[docs/usage.md](docs/usage.md)**.
+`ReadPropertyMultiple`, serving as a local device, driving the core without
+the runtime, and the other datalinks are in **[docs/usage.md](docs/usage.md)**.
 
 ## Architecture
 
@@ -96,95 +105,91 @@ already knows.
 
 | Crate | Owns | Pure |
 | --- | --- | --- |
-| `regalium-bacnet-telemetry` | tracer, meter and logger traits; no dependencies at all | ✅ |
-| `regalium-bacnet-core` | tags, primitive and constructed types, APDU, NPDU, services, object model, transaction state machine | ✅ |
+| `regalium-bacnet-telemetry` | meter, tracer and logger traits; no dependencies at all | ✅ |
+| `regalium-bacnet-core` | tags, types, APDU, NPDU, services, object model, transaction state machine | ✅ |
 | `regalium-bacnet-ip` | BACnet/IP — Annex J: BVLL, BBMD, foreign device registration | |
 | `regalium-bacnet-mstp` | MS/TP master — Clause 9, over RS-485 | |
 | `regalium-bacnet-sc` | BACnet Secure Connect — Annex AB, over WebSocket and TLS | |
-| `regalium-bacnet-ipv6` | BACnet/IPv6 — Annex U | |
+| `regalium-bacnet-ipv6` | BACnet/IPv6 — Annex U: multicast, virtual MAC table | |
 | `regalium-bacnet-schema` | generated domain models and their mirrors | |
 | `regalium-bacnet-runtime` | the clock, sockets, discovery, polling, subscription lifecycle | |
 | `regalium-bacnet` | the public surface — `pub use`, never a newtype | |
+| `regalium-bacnet-telemetry-otel` | the only crate that may name the telemetry SDK | |
 
 **Pure** means no I/O and no clock. A re-export is the same type, so
 implementing a datalink for a proprietary bridge, or adding an object type,
 needs no change here; a wrapper type would compile and then silently close
-every extension point.
+every extension point. Vendor differences live only in profiles over one
+codec — never in a codec of their own.
 
 ## Telemetry
 
 Spans open at layer boundaries and are named `bacnet.<layer>.<operation>` —
-`bacnet.tag.decode`, `bacnet.npdu.route`, `bacnet.tsm.transaction`. Metrics
+`bacnet.tag.decode`, `bacnet.npdu.route`, `bacnet.ipv6.vmac.resolve`. Metrics
 carry the device instance and object, so a slow point is findable rather than
-merely visible in an average.
-
-Attributes are declared beside the field they describe:
-
-```rust
-trace_attrs! { ReadProperty => { object_id: "bacnet.object.id",
-                                 property:  "bacnet.property.identifier" } }
-```
-
-**An undeclared field cannot be recorded.** There is no `set_attribute` call
-for a well-meaning change to add in a hot path, so a value read from equipment
-cannot leak into a trace by accident. The core has no telemetry dependency at
-all — the traits are inert, and an application that configures nothing pays one
-no-op call.
+merely visible in an average. Attributes are declared beside the field they
+describe, and **an undeclared field cannot be recorded**: there is no
+`set_attribute` for a well-meaning change to add in a hot path, so a value
+read from equipment cannot leak into a trace by accident. Export goes through
+the the-protobuf-project telemetry SDK; nothing depends on OpenTelemetry
+directly, and an application that configures nothing pays one no-op call.
 
 ## Conformance
 
 ```sh
 $ just conformance
-  ok   size: 42 items, clean       ok   purity: 4 items, clean
-  ok   licence: 40 items, clean    ok   deps: 33 items, clean
-  ok   arch: 10 items, clean
+  ok   size: 151 items, clean      ok   licence: 145 items, clean
+  ok   arch: 11 items, clean       ok   purity: 7 items, clean
+  ok   deps: 3080 items, clean
 ```
 
-Two properties of that output are load-bearing. Each gate reports **what it
-examined**, and **fails when it examined nothing** — a gate reporting success
-because it could not find the tree it was meant to inspect is worse than no
-gate, because it is believed. And every gate has a negative test that plants a
-violation and requires the gate to catch it: a gate exercised only against a
-correct repository reports success both when it works and when it does nothing.
-
-The rules: no hand-written file over 200 lines, documentation included; no I/O
-or clock reads in the pure core; dependencies only ever pointing inward; no
-OpenTelemetry dependency outside the one adapter crate; and **nothing beneath
-the driver that links a C library**, which is what keeps
+Each gate reports **what it examined** and **fails when it examined
+nothing**, and every gate has a negative test that plants a violation and
+requires the gate to catch it. The rules: no hand-written file over 200 lines,
+documentation included; no I/O or clock reads in the pure core; dependencies
+only pointing inward; no OpenTelemetry outside the adapter; and **nothing
+beneath the driver that links a C library**, which keeps
 `cargo check --target armv7-unknown-linux-gnueabihf` one flag rather than a
-cross-compilation project. CI builds every target on every run. The single,
-audited exception — the telemetry SDK's zstd and lz4 — is accepted beneath the
-otel adapter and the probe only, and the gate proves it reaches nothing else.
+project. The one audited exception — the telemetry SDK's zstd and lz4 — is
+accepted beneath the otel adapter and the probe only.
 
 ## Field probe
 
-[`tools/bacnet-probe`](tools/bacnet-probe) discovers, browses, watches and
-exports BACnet/IP devices today, as a TUI and a scriptable CLI:
-`brew install regalium-os/tap/bacnet-probe`. It carries a small codec of its
-own until the core's first live read (Phase 8), then moves onto the driver.
+[`tools/bacnet-probe`](tools/bacnet-probe) discovers, browses, watches,
+exports and dissects BACnet/IP devices today, as a TUI and a scriptable CLI:
 
-## State
+```sh
+brew install regalium-os/tap/bacnet-probe
+bacnet-probe                                  # TUI: browse, packets, log, settings
+bacnet-probe --scan '192.168.*' whois         # sweep every /24 in a /16
+bacnet-probe --bbmd 10.1.0.1 read 599 analog-input:1
+```
 
-Phase 0 is complete: the architecture, its gates, their negative tests, and CI.
-The telemetry seam's `Meter` and its SDK binding are in, ahead of the spans.
+Its **Settings** tab (`s`) edits the target, port, local socket, scan ranges,
+BBMD and timing while it runs, checks them as the command line would, and
+reopens the socket — keeping the old settings if the new ones cannot be
+opened. IPv6 addresses are refused by name until Annex U lands. The probe
+carries a small codec of its own until Phase 8, then moves onto the driver.
 
-Each phase ends with a committed corpus of hex-dumped traffic that decodes and
-re-encodes byte for byte, malformed records included, and no phase starts
-before the previous corpus passes. Ahead: the tag codec and primitive types
-(3), APDU and NPDU (4), the transaction state machine (5), `ReadProperty` and
-`Who-Is` (6), BACnet/IP (7), the first live read end to end (8), then the
-breadth of types, services and the object model, MS/TP, BACnet/SC and IPv6.
+## Documentation
+
+| | |
+| --- | --- |
+| [docs/usage.md](docs/usage.md) | the API the library is built to |
+| [docs/roadmap.md](docs/roadmap.md) | every crate's features, built and planned, and the phase order |
+| [docs/ipv6.md](docs/ipv6.md) | BACnet/IPv6: what Annex U requires and when it is done |
+| [tools/bacnet-probe](tools/bacnet-probe/README.md) | the probe: commands, TUI, settings, metrics |
+| [CLAUDE.md](CLAUDE.md) | the conventions, which are enforced, not advisory |
 
 ## Getting started
 
 ```sh
 just              # every recipe
 just conformance  # the gates, and the tests that prove they bite
-just test
+just test         # cargo test --workspace --all-targets
+just probe        # install bacnet-probe from this checkout
 just ci           # everything CI runs, in CI's order
 ```
-
-Conventions are in [CLAUDE.md](CLAUDE.md), and they are enforced, not advisory.
 
 ## Licence
 

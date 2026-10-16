@@ -18,7 +18,7 @@ use bacnet_probe::{Client, Device, Direction, Discovery, Value};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::{Duration, Instant};
 
-fn start() -> (Sender<Command>, Receiver<Event>) {
+pub(super) fn start() -> (Sender<Command>, Receiver<Event>) {
     start_with(Sim::lift_gateway())
 }
 
@@ -37,7 +37,7 @@ fn start_with(sim: Sim) -> (Sender<Command>, Receiver<Event>) {
 }
 
 /// Collects events (packets included) until `done` matches one; fails after 5 s.
-fn until(events: &Receiver<Event>, done: impl Fn(&Event) -> bool) -> Vec<Event> {
+pub(super) fn until(events: &Receiver<Event>, done: impl Fn(&Event) -> bool) -> Vec<Event> {
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut seen = Vec::new();
     loop {
@@ -53,7 +53,7 @@ fn until(events: &Receiver<Event>, done: impl Fn(&Event) -> bool) -> Vec<Event> 
     }
 }
 
-fn discover(commands: &Sender<Command>, events: &Receiver<Event>) -> Device {
+pub(super) fn discover(commands: &Sender<Command>, events: &Receiver<Event>) -> Device {
     commands.send(Command::Discover).unwrap();
     let seen = until(events, |e| matches!(e, Event::Found(_)));
     match seen.into_iter().last() {
@@ -166,3 +166,5 @@ fn every_datagram_in_both_directions_is_reported_as_a_packet() {
     };
     assert!(dir(Direction::Sent) && dir(Direction::Received));
 }
+
+mod reopen;

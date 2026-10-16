@@ -37,8 +37,40 @@ stderr, so `> scan.json` stays clean.
 | `--unicast`, `--rate N` | with `--scan`: one datagram per host instead of per /24, at N per second (default 500) |
 | `--bbmd IP[:PORT]`, `--ttl S` | register as a foreign device and discover through that BBMD |
 | `--port`, `--bind` | UDP port (47808) and local socket |
-| `--wait`, `--timeout` | seconds to collect I-Am; seconds per reply before retrying |
+| `--wait`, `--timeout` | seconds to collect I-Am; seconds per reply before retrying (2, or 1 in the TUI) |
 | `--otlp HOST:PORT`, `--label K=V` | export metrics from any command, with resource labels |
+
+Addresses are IPv4. An IPv6 address is refused with a message saying so:
+BACnet/IPv6 is a different datalink (Annex U), and the probe gains it when it
+moves onto the driver — see [docs/ipv6.md](../../docs/ipv6.md).
+
+## The TUI
+
+`bacnet-probe` with no subcommand opens four tabs; `?` lists every key.
+
+| Tab | |
+| --- | --- |
+| `1` Browse | devices, their objects, and every property of the selected one, live |
+| `2` Packets | every datagram sent and received, dissected field by field |
+| `3` Log | discoveries, value changes, points going offline, settings applied |
+| `4` Settings | the network options, editable while the probe runs (`s` from anywhere) |
+
+**Settings** lists the target, UDP port, local socket, scan ranges, unicast
+sweep and its rate, BBMD and registration TTL, I-Am wait, reply timeout and
+poll interval — each beside the flag it mirrors. `Enter` edits one (every key
+then belongs to the field, so the digits of an address do not switch tabs),
+`Space` toggles, `a` applies, `u` undoes every edit and `d` fills in the
+defaults. A value is checked by the same parser as its flag, an IPv6 address
+or a unicast sweep too large to send is refused beside the field, and nothing
+reaches the wire until it all checks.
+
+Applying cancels the COV subscriptions from the old socket, closes it, opens
+the new one, registers with the BBMD if one is set, and discovers again. If
+the new settings cannot be opened — a port another process holds, a BBMD that
+refuses — the old ones are reopened and the error is shown, so a typo costs
+a message rather than the session. The tab also shows the address the socket
+is listening on, and the command line that starts the probe with what is on
+screen, ready to paste into a script.
 
 ### Reaching devices
 

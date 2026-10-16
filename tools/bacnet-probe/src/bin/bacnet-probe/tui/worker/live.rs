@@ -47,6 +47,19 @@ impl Live {
         }
     }
 
+    /// Forgets everything but the poll interval: what a device refused on
+    /// one network says nothing about the device answering on the next.
+    pub(super) fn reset(&mut self) {
+        let interval = self.interval;
+        *self = Self::default();
+        self.interval = interval;
+    }
+
+    /// Takes the subscriptions still to be cancelled.
+    pub(super) fn take_cancels(&mut self) -> Vec<(Device, ObjectId, u32)> {
+        std::mem::take(&mut self.cancel)
+    }
+
     pub(super) fn active(&self) -> bool {
         self.device.is_some() || !self.cancel.is_empty()
     }

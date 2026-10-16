@@ -6,6 +6,7 @@
 use super::{pane, selected_style};
 use crate::tui::app::App;
 use crate::tui::keys::HELP;
+use crate::tui::settings::edit::KEYS as SETTINGS_KEYS;
 use bacnet_probe::{Direction, dissect};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -104,8 +105,8 @@ pub(super) fn log(frame: &mut Frame<'_>, app: &App, area: Rect) {
 }
 
 pub(super) fn help(frame: &mut Frame<'_>) {
-    let width = 62;
-    let height = u16::try_from(HELP.len())
+    let width = 72;
+    let height = u16::try_from(HELP.len() + SETTINGS_KEYS.len() + 1)
         .unwrap_or(u16::MAX)
         .saturating_add(4);
     let area = frame.area();
@@ -115,9 +116,14 @@ pub(super) fn help(frame: &mut Frame<'_>) {
         width: width.min(area.width),
         height: height.min(area.height),
     };
+    let key = |(k, what): &(&'static str, &'static str)| {
+        Row::new([Cell::from(*k).fg(Color::Cyan).bold(), Cell::from(*what)])
+    };
     let rows = HELP
         .iter()
-        .map(|(k, what)| Row::new([Cell::from(*k).fg(Color::Cyan).bold(), Cell::from(*what)]));
+        .map(key)
+        .chain([Row::new(["", "On the Settings tab:"]).bold()])
+        .chain(SETTINGS_KEYS.iter().map(key));
     let table = Table::new(rows, [Constraint::Length(16), Constraint::Min(0)])
         .block(pane(" Keys (esc to close) ".into(), true).style(Style::new().bg(Color::Black)));
     frame.render_widget(Clear, popup);

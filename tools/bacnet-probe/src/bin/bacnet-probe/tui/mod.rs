@@ -10,11 +10,13 @@
 
 mod app;
 mod keys;
+mod settings;
 mod ui;
 mod worker;
 
+use crate::args::Net;
+use crate::connect::{Connector, Opened};
 use app::App;
-use bacnet_probe::{Client, Discovery};
 use ratatui::crossterm::event::{self, Event as Input};
 use std::sync::mpsc;
 use std::time::Duration;
@@ -23,28 +25,34 @@ use worker::Worker;
 /// How often the screen redraws when nothing happens (highlights fade).
 const TICK: Duration = Duration::from_millis(100);
 
-/// Runs the TUI until the user quits. `label` names what discovery asks,
-/// for the header.
+/// Runs the TUI until the user quits, starting from `opened`, which `net`
+/// describes. The Settings tab reopens through `connect`.
 ///
 /// On quit the command channel closes; the worker notices at its next check
 /// and exits. It is not joined: it may be mid-read, and making the user wait
 /// out a request timeout to leave would be worse than letting the process
 /// end. COV subscriptions it leaves behind lapse within their lifetime.
 pub(crate) fn run(
-    client: Client,
-    plan: Discovery,
-    label: String,
+    opened: Opened,
+    net: Net,
     interval: Duration,
+    connect: Connector,
 ) -> std::io::Result<()> {
     let (commands, worker_commands) = mpsc::channel();
     let (worker_events, events) = mpsc::channel();
-    let worker = Worker::new(client, plan, worker_commands, worker_events);
+    let Opened {
+        client,
+        plan,
+        notes,
+    } = opened;
+    let worker = Worker::new(client, plan, worker_commands, worker_events)
+        .with_connector(net.clone(), connect);
     std::thread::Builder::new()
         .name("bacnet-worker".into())
         .spawn(move || worker.run())?;
 
-    let (mut app, start) = App::new(label);
-    app.interval = interval;
+    let (app, start) = App::new(String::new());
+    let mut app = app.configured(net, interval, notes);
     let send = |cmds: Vec<worker::Command>| cmds.into_iter().for_each(|c| drop(commands.send(c)));
     send(vec![worker::Command::SetInterval(interval)]);
     send(start);
