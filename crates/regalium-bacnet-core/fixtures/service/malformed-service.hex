@@ -1,0 +1,27 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Service bodies that break their grammar. Each is an error naming what
+# was wrong; none may panic. The APDUs around them are well formed.
+
+# Who-Is with a low limit and no high one; with a high limit alone; with a
+# field after the range.
+10 08 09 00 => error missing-field 1
+10 08 1a 03 e8 => error trailing
+10 08 09 00 1a 03 e8 21 00 => error trailing
+# I-Am without its vendor; I-Am opening with a number, not an identifier.
+10 00 c4 02 00 02 57 22 05 c4 91 03 => error missing-field application
+10 00 21 05 22 05 c4 91 03 21 05 => error invalid-value 12
+# ReadProperty without a property; with a three-octet identifier.
+00 05 01 0c 0c 00 00 00 01 => error missing-field 1
+00 05 01 0c 0b 00 00 01 19 55 => error wrong-length 12/3
+# An array index of five octets, beyond any array.
+00 05 01 0c 0c 00 00 00 01 19 55 2d 05 01 00 00 00 00 => error invalid-value 2
+# ACKs whose value is never closed, closed by the wrong tag, cut short.
+30 01 0c 0c 00 00 00 01 19 55 3e 44 42 c8 00 00 => error unbalanced
+30 01 0c 0c 00 00 00 01 19 55 3e 44 42 c8 00 00 4f => error unbalanced
+30 01 0c 0c 00 00 00 01 19 55 3e 44 42 => error truncated 5/2
+# An ACK without the value at all.
+30 01 0c 0c 00 00 00 01 19 55 => error missing-field 3
+# An error with a class and no code.
+50 01 0c 91 02 => error missing-field application

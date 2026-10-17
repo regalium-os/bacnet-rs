@@ -12,6 +12,7 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+regalium-bacnet-core.workspace = true
 regalium-bacnet-telemetry.workspace = true
 prost.workspace = true
 prost-types.workspace = true

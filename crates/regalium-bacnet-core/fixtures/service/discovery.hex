@@ -1,0 +1,20 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Who-Is and I-Am (§16.10, §16.1): each record a whole APDU.
+
+10 08 => who-is all
+10 08 09 00 1a 03 e8 => who-is 0-1000
+10 08 0a 02 57 1a 02 57 => who-is 599-599
+# The widest range: instance 4194303, three octets each.
+10 08 0b 3f ff ff 1b 3f ff ff => who-is 4194303-4194303
+# Limits written in two octets where one would do: legal, and flagged.
+10 08 0a 00 05 1a 00 0a => who-is 5-10 (non-canonical)
+# Device 599, 1476 octets, no segmentation, vendor 260.
+10 00 c4 02 00 02 57 22 05 c4 91 03 22 01 04 => i-am device:599 max-apdu 1476 segmentation no-segmentation vendor 260
+# Device 10 behind a router: 480 octets, segments both ways, vendor 5.
+10 00 c4 02 00 00 0a 22 01 e0 91 00 21 05 => i-am device:10 max-apdu 480 segmentation both vendor 5
+10 00 c4 02 00 00 0b 21 80 91 01 21 00 => i-am device:11 max-apdu 128 segmentation transmit vendor 0
+10 00 c4 02 00 00 0c 21 32 91 02 21 07 => i-am device:12 max-apdu 50 segmentation receive vendor 7
+# A segmentation value the standard does not define is kept as sent.
+10 00 c4 02 00 00 0d 21 32 91 07 21 07 => i-am device:13 max-apdu 50 segmentation 7 vendor 7

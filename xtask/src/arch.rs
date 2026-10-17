@@ -29,13 +29,17 @@ pub const LAYERS: &[Layer] = &[
     Layer { krate: "regalium-bacnet-mstp", allowed: &[CORE], pure: false },
     Layer { krate: "regalium-bacnet-sc", allowed: &[CORE], pure: false },
     Layer { krate: "regalium-bacnet-ipv6", allowed: &[CORE], pure: false },
-    Layer { krate: "regalium-bacnet-schema", allowed: &[], pure: false },
+    Layer { krate: "regalium-bacnet-schema", allowed: &[CORE], pure: false },
     Layer { krate: "regalium-bacnet-telemetry-otel", allowed: &[], pure: false },
     Layer { krate: "regalium-bacnet-runtime", allowed: DATALINKS, pure: false },
     Layer { krate: "regalium-bacnet", allowed: EVERYTHING, pure: false },
     Layer { krate: "regalium-bacnet-probe", allowed: PROBE, pure: false },
 ];
 
+/// The core, which the datalinks frame and the schema converts from. The
+/// schema reaches it because its layer contract owns the conversions
+/// between the protocol types and the generated model; the reverse import
+/// stays forbidden, so prost never enters the core's graph.
 const CORE: &str = "regalium-bacnet-core";
 
 /// What the runtime may reach: every datalink, the core, and the schema.

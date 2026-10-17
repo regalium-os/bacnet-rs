@@ -1,0 +1,37 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# ReadProperty and its answers (§15.5, §18): requests, ACKs carrying each
+# shape of value, and the errors a read meets.
+
+# Requests: analog-input 1 present-value; device 599 object-name.
+00 05 01 0c 0c 00 00 00 01 19 55 => read-property analog-input:1 present-value
+00 05 02 0c 0c 02 00 02 57 19 4d => read-property device:599 object-name
+# One slot of a priority array, and the length of the object list.
+00 05 03 0c 0c 00 40 00 01 19 57 29 08 => read-property analog-output:1 priority-array index 8
+00 05 04 0c 0c 02 00 02 57 19 4c 29 00 => read-property device:599 object-list index 0
+# A proprietary property (512), and a proprietary object type (130).
+00 05 05 0c 0c 00 00 00 01 1a 02 00 => read-property analog-input:1 property-512
+00 05 06 0c 0c 20 80 00 07 19 55 => read-property type-130:7 present-value
+# ACKs: a REAL, a string, status flags, an enumeration (degrees-celsius).
+30 01 0c 0c 00 00 00 01 19 55 3e 44 42 c8 00 00 3f => read-property-ack analog-input:1 present-value = real 100.0
+30 02 0c 0c 02 00 02 57 19 4d 3e 75 06 00 4c 69 66 74 31 3f => read-property-ack device:599 object-name = string "Lift1"
+30 03 0c 0c 00 00 00 01 19 6f 3e 82 04 00 3f => read-property-ack analog-input:1 status-flags = bits 0000
+30 04 0c 0c 00 00 00 01 19 75 3e 91 3e 3f => read-property-ack analog-input:1 units = enumerated 62
+# A whole priority array: slot 8 holds 60.0, the other fifteen relinquished.
+30 05 0c 0c 00 40 00 01 19 57 3e 00 00 00 00 00 00 00 44 42 70 00 00 00 00 00 00 00 00 00 00 3f => read-property-ack analog-output:1 priority-array = null, null, null, null, null, null, null, real 60.0, null, null, null, null, null, null, null, null
+30 06 0c 0c 00 40 00 01 19 57 29 08 3e 44 42 70 00 00 3f => read-property-ack analog-output:1 priority-array index 8 = real 60.0
+# A list of identifiers, and an empty list.
+30 07 0c 0c 02 00 02 57 19 4c 3e c4 02 00 02 57 c4 00 00 00 01 3f => read-property-ack device:599 object-list = object device:599, object analog-input:1
+30 08 0c 0c 02 00 02 57 19 4c 3e 3f => read-property-ack device:599 object-list = (empty)
+# A constructed value with context tags inside, as a BACnetDateTime is not
+# but many vendor structures are: kept as its elements.
+30 09 0c 0c 20 80 00 07 1a 02 00 3e 0e 19 05 0f 3f => read-property-ack type-130:7 property-512 = [0]{, [1] 05, }[0]
+# Errors: unknown property, unknown object, and numbers with no name.
+50 0a 0c 91 02 91 20 => error read-property: property: unknown-property
+50 0b 0c 91 01 91 1f => error read-property: object: unknown-object
+50 0c 0c 91 09 91 63 => error read-property: class-9: code-99
+# PDUs that carry no service this phase reads.
+50 0d 0f 91 02 91 28 => undecoded
+20 0e 0f => undecoded
+3c 0f 00 04 0c 0c 00 00 00 01 => undecoded

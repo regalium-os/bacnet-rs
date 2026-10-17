@@ -27,8 +27,8 @@ listed in order without inventing numbers for it.
 | 3 | the tag codec and the primitive types; the first spans and fixture corpus | **built** |
 | 4 | APDU and NPDU; one error type for every layer | **built** |
 | 5 | the transaction state machine, client side: invoke ids, retries, segmentation, abort | **built** |
-| 6 | `ReadProperty` and `Who-Is` / `I-Am` | next |
-| 7 | BACnet/IP, Annex J | |
+| 6 | `ReadProperty` and `Who-Is` / `I-Am`, into the protobuf model | **built** |
+| 7 | BACnet/IP, Annex J | next |
 | 8 | the first live read, end to end; the probe moves onto the driver | |
 | 9 | the schema tree, `protobuf/`, under the AIP linter | **built** early |
 | — | the breadth of types, services and the object model | |

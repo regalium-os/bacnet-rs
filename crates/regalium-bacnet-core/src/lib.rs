@@ -48,16 +48,19 @@
 //!
 //! # State
 //!
-//! Phase 5: [`tag`], [`primitive`], [`apdu`], [`npdu`] and the client side
-//! of [`tsm`] are built, each with a fixture corpus under `fixtures/`. The
-//! modules between them in the table above land with the phases that
+//! Phase 6: [`tag`], [`primitive`], [`apdu`], [`npdu`], the client side of
+//! [`tsm`], the first [`service`]s — Who-Is, I-Am, `ReadProperty` — and the
+//! [`enumerated`] names they need are built, each with a fixture corpus
+//! under `fixtures/`. The rest of the table lands with the phases that
 //! follow.
 
 pub mod apdu;
 mod cursor;
+pub mod enumerated;
 mod error;
 pub mod npdu;
 pub mod primitive;
+pub mod service;
 pub mod tag;
 pub mod tsm;
 

@@ -35,6 +35,15 @@ pub use regalium_bacnet_core::apdu;
 /// The network layer (Clause 6): addresses, hop count, network messages.
 pub use regalium_bacnet_core::npdu;
 
+/// Services (Clauses 13–17): Who-Is, I-Am, `ReadProperty` so far.
+pub use regalium_bacnet_core::service;
+
+/// Names for object types, properties and errors (§21).
+pub use regalium_bacnet_core::enumerated;
+
+/// The protobuf model, per Google AIP, and the conversions into it.
+pub use regalium_bacnet_schema as schema;
+
 /// The client transaction state machine (§5.4): invoke ids, retries,
 /// segmentation, on a clock the caller supplies.
 pub use regalium_bacnet_core::tsm;

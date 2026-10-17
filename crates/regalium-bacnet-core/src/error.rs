@@ -62,6 +62,11 @@ pub enum ErrorKind {
     },
     /// An APDU type of 8–15, which §20.1.1 reserves.
     PduType(u8),
+    /// A service body without the field its grammar requires next: the
+    /// context tag number expected, or 255 for an application-tagged one.
+    MissingField(u8),
+    /// Octets after the last field of a service's grammar.
+    Trailing,
 }
 
 /// A decode failure and the octets it happened at. Borrows the input.
@@ -107,6 +112,9 @@ impl fmt::Display for Error<'_> {
                 write!(f, "network message {message:#04x} cannot be {len} octets")?;
             }
             ErrorKind::PduType(t) => write!(f, "reserved APDU type {t}")?,
+            ErrorKind::MissingField(255) => f.write_str("missing application-tagged field")?,
+            ErrorKind::MissingField(n) => write!(f, "missing context field [{n}]")?,
+            ErrorKind::Trailing => f.write_str("octets after the service's last field")?,
         }
         write!(f, " at offset {}", self.offset)?;
         for b in self.bytes.iter().take(8) {
