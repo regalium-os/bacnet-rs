@@ -1,0 +1,26 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# What a shared wire delivers when something is wrong. None may panic.
+# Header failures are errors; a network message of the wrong length still
+# decodes as a message and round-trips, only its meaning is invalid.
+
+02 00 10 08 => error version 2
+01 => error truncated 2/1
+01 20 ff ff => error truncated 5/4
+01 20 00 05 06 c0 a8 => error truncated 11/7
+01 20 ff ff 00 => error truncated 6/5
+01 08 00 05 => error truncated 5/4
+01 80 => error truncated 3/2
+01 80 80 01 => error truncated 5/4
+# An NPDU with nothing after it: the network layer is whole, the APDU is not.
+01 00 => local; error truncated 1/0
+01 80 01 00 05 00 => local; message i-am-router-to-network invalid
+01 80 03 01 => local; message reject-message-to-network invalid
+01 80 12 00 => local; message what-is-network-number invalid
+01 80 00 05 => local; message who-is-router-to-network invalid
+# Reserved control bits, kept and written back (§6.2.2 requires them 0).
+01 40 10 08 => reserved-bits 0x40; unconfirmed-request service 8
+01 10 10 08 => reserved-bits 0x10; unconfirmed-request service 8
+# A source of SLEN 0, which §6.2.2 forbids: kept, so it can be seen.
+01 08 00 05 00 10 08 => from 5:*; unconfirmed-request service 8

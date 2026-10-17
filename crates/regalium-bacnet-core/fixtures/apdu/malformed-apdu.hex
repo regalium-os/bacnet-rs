@@ -1,0 +1,27 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# APDUs that are wrong. Header failures are errors; anything else decodes,
+# keeps what was odd about it, and round-trips.
+
+80 00 => error pdu-type 8
+f0 => error pdu-type 15
+00 => error truncated 2/1
+00 05 01 => error truncated 4/3
+08 05 01 00 => error truncated 5/4
+10 => error truncated 2/1
+20 02 => error truncated 3/2
+40 0b 01 => error truncated 4/3
+50 03 => error truncated 3/2
+# Reserved flag bits, kept and written back.
+01 05 01 0c => confirmed-request invoke 1 service 12 max-apdu 1476 segments unspecified reserved-flags 1
+1f 08 => unconfirmed-request service 8 reserved-flags 15
+33 01 0c => complex-ack invoke 1 service 12 reserved-flags 3
+7e 05 04 => abort invoke 5 reason 4 reserved-flags 14
+# Octets after a fixed-length PDU, which a conforming sender never adds.
+20 02 0f 00 00 => simple-ack invoke 2 service 15 trailing 0000
+# A reserved max-APDU code, and the reserved bit of the limits octet.
+00 09 01 0c => confirmed-request invoke 1 service 12 max-apdu reserved 9 segments unspecified
+00 85 01 0c => confirmed-request invoke 1 service 12 max-apdu 1476 segments unspecified reserved-limit-bit
+# More-follows on an unsegmented request: contradictory, and kept.
+04 05 01 0c => confirmed-request invoke 1 service 12 max-apdu 1476 segments unspecified more

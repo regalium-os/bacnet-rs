@@ -7,11 +7,16 @@
 //! be read, starting at the element that failed, so a caller logging it
 //! logs what the device sent rather than a description of it. Matching is
 //! on [`ErrorKind`], never on a message.
+//!
+//! One error serves every layer of the core — tags, the APDU and the NPDU —
+//! so a caller decoding a datagram matches one type however deep the fault.
 
 use core::fmt;
 
-/// What was wrong.
+/// What was wrong. Non-exhaustive: a later layer adds its own kinds, and a
+/// caller's `match` must not break when it does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ErrorKind {
     /// The buffer ended inside a header or its contents: `needed` octets
     /// were required from the start of the element, `available` were there.
@@ -44,6 +49,19 @@ pub enum ErrorKind {
     /// An opening tag without its closing tag, or a closing tag with no
     /// opening one, or one closing a different number (§20.2.1.3.2).
     Unbalanced,
+    /// An NPDU whose protocol version is not 1, the only one Clause 6
+    /// defines: what follows cannot be assumed to have its layout.
+    Version(u8),
+    /// A network layer message whose data is the wrong length for its type
+    /// (§6.4): an odd-length network list, a reject of two octets.
+    MessageLength {
+        /// The message type.
+        message: u8,
+        /// Octets of data it had.
+        len: usize,
+    },
+    /// An APDU type of 8–15, which §20.1.1 reserves.
+    PduType(u8),
 }
 
 /// A decode failure and the octets it happened at. Borrows the input.
@@ -84,6 +102,11 @@ impl fmt::Display for Error<'_> {
                 write!(f, "not a valid value of application type {tag}")?;
             }
             ErrorKind::Unbalanced => f.write_str("opening and closing tags do not pair")?,
+            ErrorKind::Version(v) => write!(f, "NPDU version {v}, not 1")?,
+            ErrorKind::MessageLength { message, len } => {
+                write!(f, "network message {message:#04x} cannot be {len} octets")?;
+            }
+            ErrorKind::PduType(t) => write!(f, "reserved APDU type {t}")?,
         }
         write!(f, " at offset {}", self.offset)?;
         for b in self.bytes.iter().take(8) {

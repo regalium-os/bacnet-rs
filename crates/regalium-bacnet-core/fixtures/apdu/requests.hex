@@ -1,0 +1,30 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# The eight APDU types (§20.1.2–§20.1.9), unsegmented. The service body is
+# left as octets; the services are decoded in Phase 6.
+
+# ReadProperty: max APDU code 5 (1476), segments unspecified, invoke 1.
+00 05 01 0c 0c 02 00 02 57 19 4d => confirmed-request invoke 1 service 12 max-apdu 1476 segments unspecified body 0c02000257194d
+# ReadPropertyMultiple, accepting a segmented answer of more than 64.
+02 75 0a 0e 0c 00 00 00 01 1e 09 55 1f => confirmed-request invoke 10 service 14 max-apdu 1476 segments >64 accepts-segmented body 0c000000011e09551f
+# WriteProperty at priority 8 from the smallest device: 50 octets.
+00 00 02 0f 0c 00 00 00 01 19 55 3e 44 42 c8 00 00 3f 49 08 => confirmed-request invoke 2 service 15 max-apdu 50 segments unspecified body 0c0000000119553e4442c800003f4908
+# Up to 8 segments of 1024 octets.
+00 34 03 0c 0c 00 00 00 01 19 55 => confirmed-request invoke 3 service 12 max-apdu 1024 segments 8 body 0c000000011955
+# Each of the other codes: 128, 206, 480 octets; 2, 4, 16, 32, 64 segments.
+00 11 04 0c => confirmed-request invoke 4 service 12 max-apdu 128 segments 2
+00 22 04 0c => confirmed-request invoke 4 service 12 max-apdu 206 segments 4
+00 43 04 0c => confirmed-request invoke 4 service 12 max-apdu 480 segments 16
+00 55 04 0c => confirmed-request invoke 4 service 12 max-apdu 1476 segments 32
+00 65 04 0c => confirmed-request invoke 4 service 12 max-apdu 1476 segments 64
+10 08 => unconfirmed-request service 8
+20 02 0f => simple-ack invoke 2 service 15
+30 01 0c 0c 00 00 00 01 19 55 3e 44 42 c8 00 00 3f => complex-ack invoke 1 service 12 body 0c0000000119553e4442c800003f
+50 03 0c 91 02 91 20 => error invoke 3 service 12 body 91029120
+# Reject: unrecognized-service (9).
+60 04 09 => reject invoke 4 reason 9
+# Abort by the client: segmentation-not-supported (4); by the server: out
+# of resources (3).
+70 05 04 => abort invoke 5 reason 4
+71 05 03 => abort invoke 5 reason 3 server

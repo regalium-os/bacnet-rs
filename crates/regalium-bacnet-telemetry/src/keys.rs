@@ -118,3 +118,22 @@ pub const DEVICE_LOCATION: Key = Key::declare("bacnet.device.location");
 
 /// What kind of point an object is: `analog`, `binary`, `multi-state`.
 pub const OBJECT_KIND: Key = Key::declare("bacnet.object.kind");
+
+/// Octets in an NPDU or APDU, header and body.
+pub const PDU_OCTETS: Key = Key::declare("bacnet.pdu.octets");
+
+/// Whether an NPDU carries a network layer message rather than an APDU.
+pub const NPDU_MESSAGE: Key = Key::declare("bacnet.npdu.message");
+
+/// Whether an NPDU names a destination or source network: it crossed, or
+/// is meant to cross, a router.
+pub const NPDU_ROUTED: Key = Key::declare("bacnet.npdu.routed");
+
+/// The APDU type, as §20.1 names it: `confirmed-request`, `error`, …
+pub const APDU_TYPE: Key = Key::declare("bacnet.apdu.type");
+
+/// The service choice number of an APDU that has one (§21).
+pub const SERVICE_CHOICE: Key = Key::declare("bacnet.apdu.service_choice");
+
+/// Whether an APDU is one segment of a larger message (§20.1.2.4).
+pub const SEGMENTED: Key = Key::declare("bacnet.apdu.segmented");

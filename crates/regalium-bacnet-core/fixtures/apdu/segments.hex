@@ -1,0 +1,18 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Segmentation (§5.2, §20.1.2.7–§20.1.6): a message too large for one frame
+# sent as numbered segments, paced by a window and acknowledged.
+
+# The first segment of a large request: SEG, MOR and SA; sequence 0, window 4.
+0e 75 0b 00 04 0e 0c 00 00 00 01 => confirmed-request invoke 11 service 14 max-apdu 1476 segments >64 accepts-segmented segment 0/4 more body 0c00000001
+# The answer in two segments, then the last.
+3c 0b 00 04 0e 1e 29 4d => complex-ack invoke 11 service 14 segment 0/4 more body 1e294d
+38 0b 01 04 0e 1f => complex-ack invoke 11 service 14 segment 1/4 body 1f
+# Segment-ACKs: from the client, from the server, negative, both.
+40 0b 01 04 => segment-ack invoke 11 sequence 1 window 4
+41 0b 00 04 => segment-ack invoke 11 sequence 0 window 4 server
+42 0b 00 04 => segment-ack invoke 11 sequence 0 window 4 nak
+43 0b 00 04 => segment-ack invoke 11 sequence 0 window 4 nak server
+# Sequence numbers wrap at 256.
+38 0b ff 01 0e 1f => complex-ack invoke 11 service 14 segment 255/1 body 1f

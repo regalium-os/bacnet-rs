@@ -5,8 +5,8 @@
 //! input, never copied, so decoding a datagram allocates nothing until a
 //! caller asks for a `Vec` of them.
 
-use super::error::{Error, ErrorKind};
 use super::header::{Header, Lvt};
+use crate::error::{Error, ErrorKind};
 
 /// One tagged element (§20.2.1). Borrows the buffer it was decoded from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

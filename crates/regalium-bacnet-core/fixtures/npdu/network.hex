@@ -1,0 +1,23 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Network layer messages (§6.4): control bit 7 set, a message type, and for
+# X'80' and above a vendor identifier.
+
+01 80 00 => local; message who-is-router-to-network any
+01 80 00 00 05 => local; message who-is-router-to-network network 5
+# A router announcing itself to every network.
+01 a0 ff ff 00 ff 01 00 05 00 06 => to global, hops 255; message i-am-router-to-network 5,6
+01 80 02 00 07 0a => local; message i-could-be-router-to-network network 7 performance 10
+# Network 9 is unreachable: reason 1, no path known.
+01 80 03 01 00 09 => local; message reject-message-to-network reason 1 network 9
+01 80 04 => local; message router-busy-to-network all
+01 80 05 00 05 => local; message router-available-to-network 5
+# A routing table query: zero ports, so a request for the router's table.
+01 80 06 00 => local; message initialize-routing-table data 00
+01 80 12 => local; message what-is-network-number
+01 80 13 00 05 01 => local; message network-number-is network 5 flag 1
+# A proprietary message from vendor 260.
+01 80 80 01 04 de ad => local; message proprietary vendor 260 data dead
+# Reserved message types round-trip as raw data.
+01 80 30 01 02 => local; message reserved data 0102

@@ -10,7 +10,7 @@
 //! canonical. Never the contents, which are values read from equipment.
 
 use super::element::{Element, decode_all, encode_all};
-use super::error::Error;
+use crate::error::Error;
 use regalium_bacnet_telemetry::{Span, Tracer, keys, trace_attrs};
 
 /// What a span records about one buffer.

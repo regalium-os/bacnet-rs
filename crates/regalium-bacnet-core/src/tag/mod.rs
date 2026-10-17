@@ -18,12 +18,11 @@
 //! is looking for. [`Header::is_canonical`] says when there is one.
 
 mod element;
-mod error;
 mod header;
 mod traced;
 mod wire;
 
+pub use crate::error::{Error, ErrorKind, Reason};
 pub use element::{Element, Elements, decode_all, elements, encode_all};
-pub use error::{Error, ErrorKind, Reason};
 pub use header::{Class, Header, Length, Lvt};
 pub use traced::{Decoded, decode_all_traced, encode_all_traced};

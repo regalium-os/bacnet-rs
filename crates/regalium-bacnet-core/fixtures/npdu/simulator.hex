@@ -1,0 +1,31 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Captured between bacnet-probe and its simulated lift gateway (device 599)
+# through a UDP relay, BVLC header removed: the requests the probe sends
+# and the answers it parses, as the driver will in Phase 8.
+
+# Who-Is to every network.
+01 20 ff ff 00 ff 10 08 => to global, hops 255; unconfirmed-request service 8
+# Who-Is for device 599 alone: a range of one.
+01 20 ff ff 00 ff 10 08 0a 02 57 1a 02 57 => to global, hops 255; unconfirmed-request service 8 body 0a02571a0257
+# I-Am: device 599, 1476 octets, no segmentation, vendor 999.
+01 00 10 00 c4 02 00 02 57 22 05 c4 91 03 22 03 e7 => local; unconfirmed-request service 0 body c4020002572205c491032203e7
+# ReadProperty of the device's object-name.
+01 04 00 05 02 0c 0c 02 00 02 57 19 4d => expects-reply; confirmed-request invoke 2 service 12 max-apdu 1476 segments unspecified body 0c02000257194d
+# Its Complex-ACK.
+01 00 30 02 0c 0c 02 00 02 57 19 4d 3e 75 19 00 4c 69 66 74 20 67 61 74 65 77 61 79 20 28 73 69 6d 75 6c 61 74 65 64 29 3f => local; complex-ack invoke 2 service 12 body 0c02000257194d3e7519004c6966742067617465776179202873696d756c61746564293f
+# A read of an object the device does not have: error class object (1),
+# code unknown-object (31).
+01 00 50 01 0c 91 01 91 1f => local; error invoke 1 service 12 body 9101911f
+# ReadPropertyMultiple of analog-output 1: twelve properties.
+01 04 00 05 02 0e 0c 00 40 00 01 1e 09 4d 09 1c 09 55 09 57 09 75 09 04 09 2e 09 6e 09 6f 09 24 09 67 09 51 1f => expects-reply; confirmed-request invoke 2 service 14 max-apdu 1476 segments unspecified body 0c004000011e094d091c0955095709750904092e096e096f0924096709511f
+# Its Complex-ACK; three properties answer with an error inside the ACK.
+01 00 30 02 0e 0c 00 40 00 01 1e 29 4d 4e 75 17 00 4d 61 63 68 69 6e 65 20 72 6f 6f 6d 20 66 61 6e 20 73 70 65 65 64 4f 29 1c 5e 91 02 91 20 5f 29 55 4e 44 42 70 00 00 4f 29 57 4e 00 00 00 00 00 00 00 44 42 70 00 00 00 00 00 00 00 00 00 00 4f 29 75 4e 91 62 4f 29 04 5e 91 02 91 20 5f 29 2e 5e 91 02 91 20 5f 29 6e 5e 91 02 91 20 5f 29 6f 4e 82 04 00 4f 29 24 4e 91 00 4f 29 67 4e 91 00 4f 29 51 4e 10 4f 1f => local; complex-ack invoke 2 service 14 body 0c004000011e294d4e7517004d616368696e6520726f6f6d2066616e2073706565644f291c5e910291205f29554e44427000004f29574e00000000000000444270000000000000000000004f29754e91624f29045e910291205f292e5e910291205f296e5e910291205f296f4e8204004f29244e91004f29674e91004f29514e104f1f
+# WriteProperty analog-output 1 present-value 42.5, and its Simple-ACK.
+01 04 00 05 03 0f 0c 00 40 00 01 19 55 3e 44 42 2a 00 00 3f => expects-reply; confirmed-request invoke 3 service 15 max-apdu 1476 segments unspecified body 0c0040000119553e44422a00003f
+01 00 20 03 0f => local; simple-ack invoke 3 service 15
+# Who-Has by name, to every network, and the I-Have answering it: device
+# 599 holds analog-input 1, "Car 1 load".
+01 20 ff ff 00 ff 10 07 3d 0b 00 43 61 72 20 31 20 6c 6f 61 64 => to global, hops 255; unconfirmed-request service 7 body 3d0b004361722031206c6f6164
+01 00 10 01 c4 02 00 02 57 c4 00 00 00 01 75 0b 00 43 61 72 20 31 20 6c 6f 61 64 => local; unconfirmed-request service 1 body c402000257c400000001750b004361722031206c6f6164

@@ -28,6 +28,16 @@ pub use regalium_bacnet_core::tag;
 /// The thirteen primitive types (§20.2.2–§20.2.14).
 pub use regalium_bacnet_core::primitive;
 
+/// The application layer's PDU (§20.1): the eight types, invoke ids and
+/// segmentation fields.
+pub use regalium_bacnet_core::apdu;
+
+/// The network layer (Clause 6): addresses, hop count, network messages.
+pub use regalium_bacnet_core::npdu;
+
+/// The one decode error every layer of the core returns.
+pub use regalium_bacnet_core::{Error, ErrorKind};
+
 /// The telemetry seam every layer records through.
 pub use regalium_bacnet_telemetry as telemetry;
 

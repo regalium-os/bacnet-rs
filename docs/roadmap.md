@@ -25,8 +25,8 @@ listed in order without inventing numbers for it.
 | — | the telemetry seam's `Meter` and its SDK binding, ahead of the spans | **built** |
 | — | the field probe, on a codec of its own | **built** |
 | 3 | the tag codec and the primitive types; the first spans and fixture corpus | **built** |
-| 4 | APDU and NPDU | next |
-| 5 | the transaction state machine: invoke ids, retries, segmentation | |
+| 4 | APDU and NPDU; one error type for every layer | **built** |
+| 5 | the transaction state machine: invoke ids, retries, segmentation | next |
 | 6 | `ReadProperty` and `Who-Is` / `I-Am` | |
 | 7 | BACnet/IP, Annex J | |
 | 8 | the first live read, end to end; the probe moves onto the driver | |

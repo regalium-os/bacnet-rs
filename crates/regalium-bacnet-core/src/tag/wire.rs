@@ -4,8 +4,8 @@
 //! A header on the wire: decoded from octets exactly as spelled, and encoded
 //! back to the same octets (§20.2.1).
 
-use super::error::{Error, ErrorKind};
 use super::header::{Class, Header, Length, Lvt};
+use crate::error::{Error, ErrorKind};
 
 impl Header {
     /// Decodes the header at the front of `buf`, returning it and its size.

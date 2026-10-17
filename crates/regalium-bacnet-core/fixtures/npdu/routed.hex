@@ -1,0 +1,19 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# NPDUs that cross a router (§6.2.2, §6.5): destination before source, the
+# hop count after both, MAC addresses opaque and as long as their length.
+
+# ReadProperty to MS/TP network 5, MAC 0x0a.
+01 24 00 05 01 0a ff 00 05 07 0c 0c 00 00 00 01 19 55 => to 5:0a, hops 255, expects-reply; confirmed-request invoke 7 service 12 max-apdu 1476 segments unspecified body 0c000000011955
+# Its answer, as the router forwards it: the source network added.
+01 08 00 05 01 0a 30 07 0c 0c 00 00 00 01 19 55 3e 44 42 c8 00 00 3f => from 5:0a; complex-ack invoke 7 service 12 body 0c0000000119553e4442c800003f
+# Router to router: to a BACnet/IP MAC (192.168.1.10:47808) on network 1,
+# from network 5, one hop spent.
+01 2c 00 01 06 c0 a8 01 0a ba c0 00 05 01 0a fe 00 05 08 0c 0c 00 00 00 01 19 55 => to 1:c0a8010abac0, from 5:0a, hops 254, expects-reply; confirmed-request invoke 8 service 12 max-apdu 1476 segments unspecified body 0c000000011955
+# Who-Is broadcast on remote network 5 only.
+01 20 00 05 00 ff 10 08 => to 5:*, hops 255; unconfirmed-request service 8
+# An I-Am answering it, through the router: device 10, 480 octets, vendor 5.
+01 08 00 05 01 0a 10 00 c4 02 00 00 0a 22 01 e0 91 03 21 05 => from 5:0a; unconfirmed-request service 0 body c40200000a2201e091032105
+# One hop left: the next router delivers it and forwards it no further.
+01 20 ff ff 00 01 10 08 => to global, hops 1; unconfirmed-request service 8
