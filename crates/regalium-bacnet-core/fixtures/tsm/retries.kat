@@ -1,0 +1,27 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# The APDU timeout and retries (§5.4.4.1): every send is a numbered attempt,
+# and after the last the transaction is abandoned, not failed.
+
+0 config apdu-timeout=1000 retries=2 => ok
+0 request 7 12 0c000000011955 => invoke 0 | tx 7 #0 a1 0275000c0c000000011955 | idle until 1000
+# Polling before the deadline changes nothing.
+500 poll => idle until 1000
+1000 poll => tx 7 #0 a2 0275000c0c000000011955 | idle until 2000
+2000 poll => tx 7 #0 a3 0275000c0c000000011955 | idle until 3000
+3000 poll => abandon 7 #0 timeout after 3 | idle
+# The answer that arrives after it was abandoned finds nothing.
+3100 rx 7 30000c01 => unknown | idle
+# Answered on the second attempt. Invoke ids count on, so the abandoned
+# id is the last to be reused.
+4000 request 7 12 - => invoke 1 | tx 7 #1 a1 0275010c | idle until 5000
+5000 poll => tx 7 #1 a2 0275010c | idle until 6000
+5400 rx 7 20010c => matched | complete 7 #1 simple | idle
+# A runtime that polls late retries once, and times the next wait from now.
+7000 request 7 12 - => invoke 2 | tx 7 #2 a1 0275020c | idle until 8000
+9500 poll => tx 7 #2 a2 0275020c | idle until 10500
+# No retries: the first timeout abandons.
+11000 config apdu-timeout=500 retries=0 => ok
+11000 request 3 12 - => invoke 0 | tx 3 #0 a1 0275000c | idle until 11500
+11500 poll => abandon 3 #0 timeout after 1 | idle

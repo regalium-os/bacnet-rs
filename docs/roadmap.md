@@ -26,8 +26,8 @@ listed in order without inventing numbers for it.
 | — | the field probe, on a codec of its own | **built** |
 | 3 | the tag codec and the primitive types; the first spans and fixture corpus | **built** |
 | 4 | APDU and NPDU; one error type for every layer | **built** |
-| 5 | the transaction state machine: invoke ids, retries, segmentation | next |
-| 6 | `ReadProperty` and `Who-Is` / `I-Am` | |
+| 5 | the transaction state machine, client side: invoke ids, retries, segmentation, abort | **built** |
+| 6 | `ReadProperty` and `Who-Is` / `I-Am` | next |
 | 7 | BACnet/IP, Annex J | |
 | 8 | the first live read, end to end; the probe moves onto the driver | |
 | 9 | the schema tree, `protobuf/`, under the AIP linter | **built** early |
@@ -56,7 +56,8 @@ out. No I/O, no clock, no panic.
 - **Object model**: identifiers, property references, the database trait a
   local device serves from.
 - **Transaction state machine**: invoke ids, retry, segmentation, abandon —
-  as a table test on a fake clock.
+  as a table test on a fake clock. The client side (§5.4.4) is built; the
+  server side (§5.4.5) comes with the object model it answers from.
 - **Lossless decoding**: re-encoding reproduces the input, malformed length
   and reserved bits included.
 

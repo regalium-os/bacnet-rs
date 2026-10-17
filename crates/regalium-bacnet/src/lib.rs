@@ -35,6 +35,10 @@ pub use regalium_bacnet_core::apdu;
 /// The network layer (Clause 6): addresses, hop count, network messages.
 pub use regalium_bacnet_core::npdu;
 
+/// The client transaction state machine (§5.4): invoke ids, retries,
+/// segmentation, on a clock the caller supplies.
+pub use regalium_bacnet_core::tsm;
+
 /// The one decode error every layer of the core returns.
 pub use regalium_bacnet_core::{Error, ErrorKind};
 

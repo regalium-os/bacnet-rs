@@ -48,9 +48,10 @@
 //!
 //! # State
 //!
-//! Phase 4: [`tag`], [`primitive`], [`apdu`] and [`npdu`] are built, each
-//! with a fixture corpus under `fixtures/`. The modules between and after
-//! them in the table above land with the phases that follow.
+//! Phase 5: [`tag`], [`primitive`], [`apdu`], [`npdu`] and the client side
+//! of [`tsm`] are built, each with a fixture corpus under `fixtures/`. The
+//! modules between them in the table above land with the phases that
+//! follow.
 
 pub mod apdu;
 mod cursor;
@@ -58,5 +59,6 @@ mod error;
 pub mod npdu;
 pub mod primitive;
 pub mod tag;
+pub mod tsm;
 
 pub use error::{Error, ErrorKind, Reason};

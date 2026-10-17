@@ -118,17 +118,23 @@ and it returns what should happen next, which is what makes a timeout, retry
 and abandon sequence a table test rather than a hardware appointment.
 
 ```rust
-use regalium_bacnet_core::tsm::{Step, Tsm};
+use regalium_bacnet_core::tsm::{Config, Request, Step, Tsm};
 
 let mut tsm = Tsm::new(Config::default());
-let invoke = tsm.request(request, now)?;
+let request = Request::new(READ_PROPERTY, body).remote(peer_limits);
+let invoke = tsm.request(peer, request, clock.now())?;
 
 loop {
     match tsm.poll(clock.now()) {
-        Step::Transmit { bytes, deadline } => port.send(bytes, deadline)?,
-        Step::Retry { attempt, bytes, .. } => port.send(bytes, /* ... */)?,
-        Step::Abandon { invoke, reason } => break report_timeout(invoke, reason),
-        Step::Idle { wake_at } => clock.park_until(wake_at),
+        Step::Transmit { peer, apdu, .. } => port.send(peer, &apdu)?,
+        Step::Complete { reply, .. } => break Ok(reply),
+        Step::Abandon { reason, .. } => break Err(reason),
+        Step::Idle { wake_at } => match port.recv_until(wake_at)? {
+            Some((from, octets)) => {
+                tsm.receive(from, &Apdu::decode(&octets)?, clock.now());
+            }
+            None => {} // the deadline passed; the next poll retries
+        },
     }
 }
 ```
@@ -137,10 +143,13 @@ Decoding is lossless, so a malformed frame can be inspected rather than
 silently normalised:
 
 ```rust
-let (npdu, apdu_bytes) = Npdu::decode(&bvlc.payload)?;
-let apdu = Apdu::decode(apdu_bytes)?;
-
-assert_eq!(apdu.encode_to_vec(), apdu_bytes);
+let npdu = Npdu::decode(&bvlc.payload)?;
+if let Body::Apdu(octets) = npdu.body {
+    let apdu = Apdu::decode(octets)?;
+    let mut again = Vec::new();
+    apdu.encode(&mut again);
+    assert_eq!(again, octets);
+}
 ```
 
 ## Datalinks

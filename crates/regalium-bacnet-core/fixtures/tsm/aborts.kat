@@ -1,0 +1,31 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# What this device aborts, and with which reason (§20.1.9.3): an answer too
+# large to hold, a PDU that makes no sense in the transaction's state, a
+# segmented answer it said it could not take. Each sends an Abort (70).
+
+0 config apdu-timeout=3000 segment-timeout=1000 window=4 max-reassembly=4 => ok
+# Five octets of answer against a limit of four: buffer-overflow (1).
+0 request 1 14 - => invoke 0 | tx 1 #0 a1 0275000e | idle until 3000
+100 rx 1 3c0000040e0102 => matched | tx 1 #0 a1 40000004 | idle until 4100
+200 rx 1 3c0001040e030405 => matched | tx 1 #0 a1 700001 | abandon 1 #0 aborted 1 | idle
+# A Segment-ACK for an unsegmented request: invalid-apdu-in-this-state (2).
+1000 request 1 12 - => invoke 1 | tx 1 #1 a1 0275010c | idle until 4000
+1100 rx 1 41010004 => matched | tx 1 #1 a1 700102 | abandon 1 #1 aborted 2 | idle
+# A segmented answer that starts at segment 3.
+2000 request 1 12 - => invoke 2 | tx 1 #2 a1 0275020c | idle until 5000
+2100 rx 1 3c0203040c01 => matched | tx 1 #2 a1 700202 | abandon 1 #2 aborted 2 | idle
+# An unsegmented Complex-ACK in the middle of a segmented one.
+3000 request 1 12 - => invoke 3 | tx 1 #3 a1 0275030c | idle until 6000
+3100 rx 1 3c0300040c01 => matched | tx 1 #3 a1 40030004 | idle until 7100
+3200 rx 1 30030c02 => matched | tx 1 #3 a1 700302 | abandon 1 #3 aborted 2 | idle
+# The server aborting part way is its answer, not this device's abort.
+4000 request 1 12 - => invoke 4 | tx 1 #4 a1 0275040c | idle until 7000
+4100 rx 1 3c0400040c01 => matched | tx 1 #4 a1 40040004 | idle until 8100
+4200 rx 1 710409 => matched | complete 1 #4 abort 9 | idle
+# Not accepting segmented answers: SA is clear, and one that comes anyway
+# is aborted as segmentation-not-supported (4).
+5000 config no-segmented-response => ok
+5000 request 1 12 - => invoke 0 | tx 1 #0 a1 0075000c | idle until 8000
+5100 rx 1 3c0000040c01 => matched | tx 1 #0 a1 700004 | abandon 1 #0 aborted 4 | idle

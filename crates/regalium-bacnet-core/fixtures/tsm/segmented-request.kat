@@ -1,0 +1,45 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# A request larger than the peer takes whole, sent in segments (§5.2,
+# §5.4.4.1). The peer's 10-octet max APDU is smaller than any datalink's, so
+# each segment carries 4 octets and the scenarios stay readable.
+#
+# A segment is SEG MOR SA (0e), or SEG SA (0a) for the last; then the limits
+# octet, invoke id, sequence number, proposed window (4) and service.
+
+0 config apdu-timeout=3000 segment-timeout=1000 retries=2 window=4 => ok
+# The first segment goes alone; the server's Segment-ACK sets the window (2).
+0 request 5 15 00112233445566778899 max-apdu=10 segmented => invoke 0 | tx 5 #0 a1 0e750000040f00112233 | idle until 1000
+100 rx 5 41000002 => matched | tx 5 #0 a1 0e750001040f44556677 | tx 5 #0 a1 0a750002040f8899 | idle until 1100
+# Every segment acknowledged: wait the APDU timeout for the answer.
+200 rx 5 41000202 => matched | idle until 3200
+300 rx 5 20000f => matched | complete 5 #0 simple | idle
+# Segment 1 is lost: the server acknowledges 0 negatively, and the rest of
+# the window is sent again from 1.
+1000 request 5 15 00112233445566778899 max-apdu=10 segmented => invoke 1 | tx 5 #1 a1 0e750100040f00112233 | idle until 2000
+1100 rx 5 41010004 => matched | tx 5 #1 a1 0e750101040f44556677 | tx 5 #1 a1 0a750102040f8899 | idle until 2100
+1200 rx 5 43010004 => matched | tx 5 #1 a1 0e750101040f44556677 | tx 5 #1 a1 0a750102040f8899 | idle until 2200
+1300 rx 5 41010204 => matched | idle until 4300
+1400 rx 5 20010f => matched | complete 5 #1 simple | idle
+# No Segment-ACK at all: the window is sent again, twice, then abandoned.
+2000 request 5 15 00112233445566778899 max-apdu=10 segmented => invoke 2 | tx 5 #2 a1 0e750200040f00112233 | idle until 3000
+3000 poll => tx 5 #2 a1 0e750200040f00112233 | idle until 4000
+4000 poll => tx 5 #2 a1 0e750200040f00112233 | idle until 5000
+5000 poll => abandon 5 #2 timeout after 1 | idle
+# Fully acknowledged but never answered: the whole request again, as a
+# second attempt, from segment 0.
+6000 request 5 15 00112233445566 max-apdu=10 segmented => invoke 3 | tx 5 #3 a1 0e750300040f00112233 | idle until 7000
+6100 rx 5 41030004 => matched | tx 5 #3 a1 0a750301040f445566 | idle until 7100
+6200 rx 5 41030104 => matched | idle until 9200
+9200 poll => tx 5 #3 a2 0e750300040f00112233 | idle until 10200
+9300 rx 5 41030004 => matched | tx 5 #3 a2 0a750301040f445566 | idle until 10300
+# An answer may arrive before the last Segment-ACK.
+9400 rx 5 20030f => matched | complete 5 #3 simple | idle
+# Refused before anything is sent: too large for a peer that does not
+# segment, more segments than it takes, a max APDU with no room for data.
+10000 request 6 15 00112233445566778899 max-apdu=10 => refused NeedsSegmentation | idle
+10000 request 6 15 00112233445566778899 max-apdu=10 segmented max-segments=2 => refused TooManySegments { needed: 3 } | idle
+10000 request 6 15 00112233 max-apdu=6 segmented => refused PeerTooSmall | idle
+# Exactly the peer's max APDU goes whole, and refusals used no invoke id.
+10000 request 6 15 001122334455 max-apdu=10 => invoke 4 | tx 6 #4 a1 0275040f001122334455 | idle until 13000

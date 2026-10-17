@@ -8,9 +8,10 @@ It is a library and a runtime, not an application: no global state, no hidden
 threads, and no clock the core reads behind your back. It is built to be
 imported by software that must keep talking to lift controllers for years.
 
-> **Status.** Phase 4 is complete: the core's **tag codec, the thirteen
+> **Status.** Phase 5 is complete: the core's **tag codec, the thirteen
 > primitive types, the APDU and the NPDU decode and re-encode losslessly**,
-> against committed fixture corpora. The **field probe ships today**. The driver cannot read a
+> and its **transaction state machine** retries, segments and abandons on a
+> fake clock — each against a committed fixture corpus. The **field probe ships today**. The driver cannot read a
 > device yet: the client code below is the target API, written down so its
 > shape can be argued with before it is built. The first live read is Phase 8.
 
@@ -18,7 +19,7 @@ imported by software that must keep talking to lift controllers for years.
 
 | Area | Covers | State |
 | --- | --- | --- |
-| Core | tags, the 13 primitive types, APDU and NPDU (**built**); services, object model, transaction state machine — sans-io, lossless | Phases 3–6 |
+| Core | tags, the 13 primitive types, APDU, NPDU, the client transaction state machine (**built**); services, object model — sans-io, lossless | Phases 3–6 |
 | BACnet/IP | Annex J: BVLL, BBMD, foreign device registration | Phase 7 |
 | Runtime | discovery, polling, COV lifecycle, reconnection, offline as an event | Phase 8 |
 | Schema | `protobuf/` per Google AIP; prost, FlatBuffers and Cap'n Proto | Phase 9 |
@@ -44,9 +45,9 @@ should happen next:
 
 ```rust
 match tsm.poll(clock.now()) {
-    Step::Transmit { bytes, deadline } => port.send(bytes, deadline)?,
-    Step::Retry { attempt, bytes, .. } => port.send(bytes, /* ... */)?,
-    Step::Abandon { invoke, reason } => report_timeout(invoke, reason),
+    Step::Transmit { peer, apdu, .. } => port.send(peer, &apdu)?,
+    Step::Complete { invoke, reply, .. } => answered(invoke, reply),
+    Step::Abandon { peer, reason, .. } => went_quiet(peer, reason),
     Step::Idle { wake_at } => clock.park_until(wake_at),
 }
 ```

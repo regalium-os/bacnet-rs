@@ -1,0 +1,31 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# A segmented Complex-ACK reassembled (§5.4.4.2, §5.4.4.3). This device
+# takes windows of 2, so a server proposing 4 is acknowledged with 2: after
+# segment 0, then every second segment, and at the last.
+
+0 config apdu-timeout=3000 segment-timeout=1000 retries=2 window=2 => ok
+0 request 9 14 0c000000011e094d1f => invoke 0 | tx 9 #0 a1 0275000e0c000000011e094d1f | idle until 3000
+# Segment 0 is acknowledged alone; the wait is now four segment timeouts.
+100 rx 9 3c0000040eaa => matched | tx 9 #0 a1 40000002 | idle until 4100
+200 rx 9 3c0001040ebb => matched | idle until 4200
+300 rx 9 3c0002040ecc => matched | tx 9 #0 a1 40000202 | idle until 4300
+400 rx 9 380003040edd => matched | tx 9 #0 a1 40000302 | complete 9 #0 complex aabbccdd | idle
+# Segment 1 is lost: segment 2 is answered with a negative Segment-ACK of
+# 0, and reassembly resumes when 1 comes again.
+1000 request 9 14 - => invoke 1 | tx 9 #1 a1 0275010e | idle until 4000
+1100 rx 9 3c0100020e01 => matched | tx 9 #1 a1 40010002 | idle until 5100
+1200 rx 9 3c0102020e03 => matched | tx 9 #1 a1 42010002 | idle until 5200
+1300 rx 9 3c0101020e02 => matched | idle until 5300
+1400 rx 9 3c0102020e03 => matched | tx 9 #1 a1 40010202 | idle until 5400
+1500 rx 9 380103020e04 => matched | tx 9 #1 a1 40010302 | complete 9 #1 complex 01020304 | idle
+# A segmented answer of one segment.
+2000 request 9 14 - => invoke 2 | tx 9 #2 a1 0275020e | idle until 5000
+2100 rx 9 380200020eee => matched | tx 9 #2 a1 40020002 | complete 9 #2 complex ee | idle
+# The server goes quiet part way: abandoned after four segment timeouts,
+# without an Abort — it has its own retries to spend first.
+3000 request 9 14 - => invoke 3 | tx 9 #3 a1 0275030e | idle until 6000
+3100 rx 9 3c0300020e01 => matched | tx 9 #3 a1 40030002 | idle until 7100
+7099 poll => idle until 7100
+7100 poll => abandon 9 #3 segment-timeout | idle

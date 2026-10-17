@@ -1,0 +1,38 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Each way a peer answers a confirmed request (§20.1.4–§20.1.9), and the
+# answers that belong to no open transaction. Times are milliseconds.
+
+0 config apdu-timeout=3000 retries=3 => ok
+# ReadProperty, answered by a Complex-ACK before the timeout.
+0 request 1 12 0c000000011955 => invoke 0 | tx 1 #0 a1 0275000c0c000000011955 | idle until 3000
+120 rx 1 30000c0c0000000119553e4442c800003f => matched | complete 1 #0 complex 0c0000000119553e4442c800003f | idle
+# WriteProperty, answered by a Simple-ACK.
+200 request 1 15 0c0000000119553e4442c800003f4908 => invoke 1 | tx 1 #1 a1 0275010f0c0000000119553e4442c800003f4908 | idle until 3200
+250 rx 1 20010f => matched | complete 1 #1 simple | idle
+# An unknown object: Error, class object (1), code unknown-object (31).
+300 request 1 12 0c000000631955 => invoke 2 | tx 1 #2 a1 0275020c0c000000631955 | idle until 3300
+340 rx 1 50020c9101911f => matched | complete 1 #2 error 9101911f | idle
+# A service the peer does not know: Reject, unrecognized-service (9).
+400 request 1 99 - => invoke 3 | tx 1 #3 a1 02750363 | idle until 3400
+410 rx 1 600309 => matched | complete 1 #3 reject 9 | idle
+# The server aborts: out-of-resources (3).
+500 request 1 14 0c000000011e094d1f => invoke 4 | tx 1 #4 a1 0275040e0c000000011e094d1f | idle until 3500
+510 rx 1 710403 => matched | complete 1 #4 abort 3 | idle
+# A second Simple-ACK for a transaction already complete finds nothing.
+600 rx 1 20010f => unknown | idle
+# An answer naming the wrong service, or from the wrong peer, is not this
+# transaction's: most often a late answer to an earlier use of the id.
+700 request 1 12 0c02000257194d => invoke 5 | tx 1 #5 a1 0275050c0c02000257194d | idle until 3700
+710 rx 1 20050f => unknown | idle until 3700
+720 rx 2 20050c => unknown | idle until 3700
+730 rx 1 20050c => matched | complete 1 #5 simple | idle
+# What only a server receives: a request, and an Abort from a client.
+800 rx 1 1008 => not-for-client | idle
+810 rx 1 700504 => not-for-client | idle
+# Two peers at once: invoke ids are unique across peers, answers may cross.
+900 request 1 12 - => invoke 6 | tx 1 #6 a1 0275060c | idle until 3900
+900 request 2 12 - => invoke 7 | tx 2 #7 a1 0275070c | idle until 3900
+950 rx 2 30070c01 => matched | complete 2 #7 complex 01 | idle until 3900
+960 rx 1 20060c => matched | complete 1 #6 simple | idle
