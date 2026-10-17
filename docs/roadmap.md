@@ -28,8 +28,8 @@ listed in order without inventing numbers for it.
 | 4 | APDU and NPDU; one error type for every layer | **built** |
 | 5 | the transaction state machine, client side: invoke ids, retries, segmentation, abort | **built** |
 | 6 | `ReadProperty` and `Who-Is` / `I-Am`, into the protobuf model | **built** |
-| 7 | BACnet/IP, Annex J | next |
-| 8 | the first live read, end to end; the probe moves onto the driver | |
+| 7 | BACnet/IP, Annex J: BVLL, foreign device, BBMD, the UDP link; the datalink trait | **built** |
+| 8 | the first live read, end to end; the probe moves onto the driver | next |
 | 9 | the schema tree, `protobuf/`, under the AIP linter | **built** early |
 | — | the breadth of types, services and the object model | |
 | — | MS/TP, BACnet/SC and BACnet/IPv6 | |

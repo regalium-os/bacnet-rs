@@ -27,3 +27,16 @@
 //!
 //! `bacnet.ip.{send,receive,forward}`, `bacnet.ip.bbmd.distribute`,
 //! `bacnet.ip.foreign.register`.
+//!
+//! # State
+//!
+//! Phase 7: the [`bvll`] codec with its corpus under `fixtures/`, the
+//! [`foreign`] registration and [`bbmd`] state machines on an injected
+//! clock, and [`BacnetIp`], the UDP link that drives them.
+
+pub mod bbmd;
+pub mod bvll;
+pub mod foreign;
+mod link;
+
+pub use link::{BacnetIp, MAX_APDU};

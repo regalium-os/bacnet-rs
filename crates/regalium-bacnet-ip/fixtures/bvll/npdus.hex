@@ -1,0 +1,18 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# BVLL messages that carry an NPDU (Annex J.2.9–J.2.12): what every
+# BACnet/IP datagram of application traffic is.
+
+# Who-Is to every network, broadcast on this subnet.
+81 0b 00 0c 01 20 ff ff 00 ff 10 08 => original-broadcast npdu 0120ffff00ff1008
+# ReadProperty, sent to one device.
+81 0a 00 11 01 04 00 05 01 0c 0c 02 00 02 57 19 4d => original-unicast npdu 01040005010c0c02000257194d
+# A Who-Is a BBMD relays, from 192.168.1.10:47808 on its subnet.
+81 04 00 12 c0 a8 01 0a ba c0 01 20 ff ff 00 ff 10 08 => forwarded from 192.168.1.10:47808 npdu 0120ffff00ff1008
+# A foreign device's Who-Is, for its BBMD to distribute.
+81 09 00 0c 01 20 ff ff 00 ff 10 08 => distribute-broadcast npdu 0120ffff00ff1008
+# An I-Am a BBMD relays from a device on port 47809.
+81 04 00 1b 0a 00 00 05 ba c1 01 00 10 00 c4 02 00 02 57 22 05 c4 91 03 22 01 04 => forwarded from 10.0.0.5:47809 npdu 01001000c4020002572205c49103220104
+# An empty NPDU is still a message; the NPDU layer refuses it.
+81 0a 00 04 => original-unicast npdu (empty)

@@ -1,0 +1,23 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Datagrams on port 47808 that are not well-formed BACnet/IP. None may
+# panic. A length field that disagrees with the datagram is kept, not
+# refused, so the sender can be found.
+
+81 0a => error truncated 4/2
+82 0a 00 04 => error not-bacnet-ip 130
+00 => error truncated 4/1
+45 00 00 1c => error not-bacnet-ip 69
+81 00 00 05 00 => error wrong-length 0/1
+81 00 00 08 00 00 00 00 => error wrong-length 0/4
+81 05 00 07 00 3c 00 => error wrong-length 5/3
+81 04 00 08 c0 a8 01 0a => error wrong-length 4/4
+81 01 00 0d c0 a8 01 01 ba c0 ff ff ff => error wrong-length 1/9
+81 07 00 0f 0a 00 00 05 ba c0 00 3c 00 5a 00 => error wrong-length 7/11
+81 02 00 05 00 => error wrong-length 2/1
+81 08 00 0b 0a 00 00 05 ba c0 00 => error wrong-length 8/7
+# The length field says 32; the datagram is 8.
+81 0a 00 20 01 00 10 08 => original-unicast npdu 01001008 (length 32, datagram 8)
+# The length field says 4; the datagram carries more.
+81 0b 00 04 01 00 10 08 => original-broadcast npdu 01001008 (length 4, datagram 8)

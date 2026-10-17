@@ -48,6 +48,13 @@ pub use regalium_bacnet_schema as schema;
 /// segmentation, on a clock the caller supplies.
 pub use regalium_bacnet_core::tsm;
 
+/// The datalink trait every network satisfies.
+pub use regalium_bacnet_core::datalink;
+
+/// BACnet/IP (Annex J): BVLL, foreign device registration, BBMD, and the
+/// UDP link.
+pub use regalium_bacnet_ip as ip;
+
 /// The one decode error every layer of the core returns.
 pub use regalium_bacnet_core::{Error, ErrorKind};
 

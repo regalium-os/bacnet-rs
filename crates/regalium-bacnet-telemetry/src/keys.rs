@@ -137,3 +137,7 @@ pub const SERVICE_CHOICE: Key = Key::declare("bacnet.apdu.service_choice");
 
 /// Whether an APDU is one segment of a larger message (§20.1.2.4).
 pub const SEGMENTED: Key = Key::declare("bacnet.apdu.segmented");
+
+/// The BVLC function of a BACnet/IP datagram: `original-unicast-npdu`,
+/// `forwarded-npdu`, `register-foreign-device`, …
+pub const BVLC_FUNCTION: Key = Key::declare("bacnet.ip.function");

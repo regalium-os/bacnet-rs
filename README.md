@@ -8,20 +8,20 @@ It is a library and a runtime, not an application: no global state, no hidden
 threads, and no clock the core reads behind your back. It is built to be
 imported by software that must keep talking to lift controllers for years.
 
-> **Status.** Phase 6 is complete: tags, primitive types, APDU and NPDU
-> decode and re-encode **losslessly**; the **transaction state machine**
-> retries, segments and abandons on a fake clock; **Who-Is, I-Am and
-> `ReadProperty`** decode into the protobuf model — each against a committed
-> fixture corpus. The **field probe ships today**. The driver cannot read a
-> device yet: the client code below is the target API, written down so its
-> shape can be argued with before it is built. The first live read is Phase 8.
+> **Status.** Phase 7 is complete: tags, primitive types, APDU, NPDU and
+> BVLL decode and re-encode **losslessly**; the **transaction state
+> machine** retries, segments and abandons on a fake clock; **Who-Is, I-Am
+> and `ReadProperty`** decode into the protobuf model; **BACnet/IP** sends
+> and receives, as a foreign device or a BBMD — each against a committed
+> corpus. The **field probe ships today**; the driver's first live read is
+> Phase 8, and the client code below is its target API.
 
 ## Features
 
 | Area | Covers | State |
 | --- | --- | --- |
 | Core | tags, the 13 primitive types, APDU, NPDU, the client transaction state machine, Who-Is / I-Am / `ReadProperty` (**built**); the other services, object model — sans-io, lossless | Phases 3–6 |
-| BACnet/IP | Annex J: BVLL, BBMD, foreign device registration | Phase 7 |
+| BACnet/IP | Annex J: BVLL, BBMD, foreign device registration, the UDP link (**built**) | Phase 7 |
 | Runtime | discovery, polling, COV lifecycle, reconnection, offline as an event | Phase 8 |
 | Schema | `protobuf/` per Google AIP; prost, FlatBuffers and Cap'n Proto; conversion from the decoded services (**built**) | Phase 9 |
 | MS/TP | Clause 9 master node over RS-485 | planned |
@@ -109,7 +109,7 @@ already knows.
 | --- | --- | --- |
 | `regalium-bacnet-telemetry` | meter, tracer and logger traits; no dependencies at all | ✅ |
 | `regalium-bacnet-core` | tags, types, APDU, NPDU, services, object model, transaction state machine | ✅ |
-| `regalium-bacnet-ip` | BACnet/IP — Annex J: BVLL, BBMD, foreign device registration | |
+| `regalium-bacnet-ip` | BACnet/IP — Annex J: BVLL, BBMD, foreign device registration | ✅ |
 | `regalium-bacnet-mstp` | MS/TP master — Clause 9, over RS-485 | |
 | `regalium-bacnet-sc` | BACnet Secure Connect — Annex AB, over WebSocket and TLS | |
 | `regalium-bacnet-ipv6` | BACnet/IPv6 — Annex U: multicast, virtual MAC table | |

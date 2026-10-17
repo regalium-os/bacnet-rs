@@ -25,6 +25,7 @@
 //! | `service` | confirmed, unconfirmed and acknowledgement service codecs (Clauses 13–17) |
 //! | `obj` | the object model: identifiers, property references, the database trait |
 //! | `tsm` | the transaction state machine: invoke ids, retries, segmentation |
+//! | `datalink` | the trait every datalink satisfies: send an NPDU, wait for one |
 //!
 //! Must not: perform I/O, hold an operating-system handle, consult a real
 //! clock, log, or panic. Malformed input is the normal case on a shared wire;
@@ -56,6 +57,7 @@
 
 pub mod apdu;
 mod cursor;
+pub mod datalink;
 pub mod enumerated;
 mod error;
 pub mod npdu;

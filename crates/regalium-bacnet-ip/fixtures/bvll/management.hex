@@ -1,0 +1,22 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# What BBMDs and foreign devices say to each other (Annex J.2.1–J.2.8).
+
+81 00 00 06 00 00 => result 0x0000
+81 00 00 06 00 30 => result 0x0030
+81 00 00 06 00 60 => result 0x0060
+# Register as a foreign device for 60 s, and for the longest TTL.
+81 05 00 06 00 3c => register-foreign-device ttl 60
+81 05 00 06 ff ff => register-foreign-device ttl 65535
+81 02 00 04 => read-bdt
+# Two peers: one two-hop (all-ones mask), one one-hop (its subnet's mask).
+81 01 00 18 c0 a8 01 01 ba c0 ff ff ff ff c0 a8 02 01 ba c0 ff ff ff 00 => write-bdt 192.168.1.1:47808/255.255.255.255, 192.168.2.1:47808/255.255.255.0
+81 03 00 0e c0 a8 01 01 ba c0 ff ff ff ff => read-bdt-ack 192.168.1.1:47808/255.255.255.255
+81 03 00 04 => read-bdt-ack (empty)
+81 06 00 04 => read-fdt
+# One foreign device: registered for 60 s, 90 s left with the grace period.
+81 07 00 0e 0a 00 00 05 ba c0 00 3c 00 5a => read-fdt-ack 10.0.0.5:47808 ttl 60 remaining 90
+81 08 00 0a 0a 00 00 05 ba c0 => delete-fdt-entry 10.0.0.5:47808
+81 0c 00 06 aa bb => secure-bvll data aabb
+81 0d 00 05 01 => unknown 13 data 01
