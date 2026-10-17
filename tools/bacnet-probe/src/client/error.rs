@@ -26,8 +26,8 @@ pub enum ReadError {
     Reject(u8),
     /// An Abort-PDU (§18.9), e.g. reason 4, segmentation-not-supported.
     Abort(u8),
-    /// The device insisted on segmenting the reply; the probe does not
-    /// reassemble, so it aborted the transaction.
+    /// The request needs segmentation the device cannot take, so it was
+    /// never sent. A segmented answer is reassembled, not refused.
     Segmented,
     /// The reply decoded to nothing the grammar allows.
     Malformed,

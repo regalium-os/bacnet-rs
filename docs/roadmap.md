@@ -29,9 +29,9 @@ listed in order without inventing numbers for it.
 | 5 | the transaction state machine, client side: invoke ids, retries, segmentation, abort | **built** |
 | 6 | `ReadProperty` and `Who-Is` / `I-Am`, into the protobuf model | **built** |
 | 7 | BACnet/IP, Annex J: BVLL, foreign device, BBMD, the UDP link; the datalink trait | **built** |
-| 8 | the first live read, end to end; the probe moves onto the driver | next |
+| 8 | the first live read, end to end; the probe frames and transacts through the driver | **built** |
 | 9 | the schema tree, `protobuf/`, under the AIP linter | **built** early |
-| — | the breadth of types, services and the object model | |
+| — | the breadth of types, services and the object model; polling and COV in the runtime | next |
 | — | MS/TP, BACnet/SC and BACnet/IPv6 | |
 | 17 | fuzz targets for every decoder | |
 
@@ -134,8 +134,13 @@ OTLP metrics; an offline dissector; a simulated gateway; and a TUI with
 Browse, Packets, Log and Settings tabs, where the network options are edited
 and applied live. See [its README](../tools/bacnet-probe/README.md).
 
-Its codec is deleted in Phase 8, when it moves onto the driver; IPv6 and the
-other datalinks then reach it without probe-specific work.
+Since Phase 8 it frames (BVLL, NPDU), transacts (invoke ids, retries,
+segmented answers reassembled) and registers as a foreign device through the
+driver. It keeps its own socket — sweeping ranges at a set rate and
+capturing every datagram for its dissector are its business — and its own
+codecs for the services the core does not have yet (`ReadPropertyMultiple`,
+`WriteProperty`, COV, `CreateObject`, `DeleteObject`), which go as the core
+gains them.
 
 ## The gates
 

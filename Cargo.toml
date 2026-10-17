@@ -32,6 +32,7 @@ repository = "https://github.com/regalium-os/bacnet-rs"
 authors = ["RegaliumOS"]
 
 [workspace.dependencies]
+regalium-bacnet = { path = "crates/regalium-bacnet", version = "0.1.0" }
 regalium-bacnet-core = { path = "crates/regalium-bacnet-core", version = "0.1.0" }
 regalium-bacnet-ip = { path = "crates/regalium-bacnet-ip", version = "0.1.0" }
 regalium-bacnet-ipv6 = { path = "crates/regalium-bacnet-ipv6", version = "0.1.0" }

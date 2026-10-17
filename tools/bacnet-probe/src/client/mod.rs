@@ -34,12 +34,13 @@ pub use plan::Discovery;
 
 use crate::frame::Route;
 use crate::service::cov::Notification;
+use regalium_bacnet::tsm::{self, Tsm};
 use regalium_bacnet_telemetry::{Logger, Meter, NoopLogger, NoopMeter, NoopTracer, SpanId, Tracer};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io;
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// A device that answered Who-Is with I-Am (§16.10), or I-Have.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -82,7 +83,10 @@ pub type Trace = Box<dyn Fn(Direction, SocketAddr, &[u8]) + Send>;
 /// The client. See the module documentation for its concurrency rules.
 pub struct Client {
     socket: UdpSocket,
-    invoke: u8,
+    /// The driver's transaction state machine, keyed by device instance.
+    tsm: Tsm<u32>,
+    /// When the client was bound: the origin of the machines' clock.
+    origin: Instant,
     timeout: Duration,
     retries: u32,
     trace: Option<Trace>,
@@ -97,7 +101,7 @@ pub struct Client {
     /// after it, in the same call or step, is about.
     last_device: Option<u32>,
     pending: VecDeque<Notification>,
-    foreign: Option<foreign::Registration>,
+    foreign: Option<regalium_bacnet::ip::foreign::Registration>,
     next_process: u32,
     no_rpm: HashSet<u32>,
 }
@@ -114,7 +118,8 @@ impl Client {
         socket.set_broadcast(true)?;
         Ok(Self {
             socket,
-            invoke: 0,
+            tsm: Tsm::new(tsm::Config::default()),
+            origin: Instant::now(),
             timeout: Duration::from_secs(2),
             retries: 2,
             trace: None,

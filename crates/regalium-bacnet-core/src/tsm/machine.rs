@@ -53,6 +53,13 @@ impl<P: Copy + Ord> Tsm<P> {
         self
     }
 
+    /// Replaces the timers and limits, from now on: an open transaction's
+    /// next timeout uses the new ones. Invoke ids carry on, so an answer to
+    /// a request made before cannot be taken for one made after.
+    pub fn reconfigure(&mut self, config: Config) {
+        self.config = config;
+    }
+
     /// How many transactions are open.
     #[must_use]
     pub fn open(&self) -> usize {

@@ -28,6 +28,7 @@ name = "bacnet-probe"
 path = "src/bin/bacnet-probe/main.rs"
 
 [dependencies]
+regalium-bacnet.workspace = true
 regalium-bacnet-telemetry.workspace = true
 regalium-bacnet-telemetry-otel.workspace = true
 regalium-bacnet-schema.workspace = true

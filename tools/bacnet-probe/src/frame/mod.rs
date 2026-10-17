@@ -6,16 +6,16 @@
 //!
 //! `bvll` holds the BVLL messages that carry no NPDU at all: foreign device
 //! registration and its result.
+//!
+//! Since Phase 8 the octets are the driver's: these functions keep the
+//! probe's shape — a route, a delivery, a borrowed APDU — and hand the
+//! encoding and decoding to `regalium_bacnet::{ip::bvll, npdu}`.
 
 pub mod bvll;
 
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-
-pub(crate) const BVLC_TYPE: u8 = 0x81;
-const FORWARDED_NPDU: u8 = 0x04;
-const DISTRIBUTE_BROADCAST: u8 = 0x09;
-const ORIGINAL_UNICAST: u8 = 0x0A;
-const ORIGINAL_BROADCAST: u8 = 0x0B;
+use regalium_bacnet::ip::bvll::{Bvll, Function};
+use regalium_bacnet::npdu::{Address, Body, Destination, Npdu};
+use std::net::SocketAddr;
 
 /// A `BACnet` network address beyond the IP hop: a device behind a router,
 /// such as an MS/TP controller behind a `BACnet`/IP gateway (§6.2.2).
@@ -68,89 +68,57 @@ pub fn encode(
     expecting_reply: bool,
     apdu: &[u8],
 ) -> Vec<u8> {
-    let mut control = 0u8;
-    let mut addressing = Vec::new();
-    if let Some(dest) = dest {
-        control |= 0x20;
-        addressing.extend(dest.net.to_be_bytes());
-        addressing.push(u8::try_from(dest.mac.len()).unwrap_or(u8::MAX));
-        addressing.extend(&dest.mac);
-        addressing.push(0xFF); // Hop count: routers decrement it to kill loops.
-    }
-    if expecting_reply {
-        control |= 0x04;
-    }
-    let function = match delivery {
-        Delivery::Unicast => ORIGINAL_UNICAST,
-        Delivery::Broadcast => ORIGINAL_BROADCAST,
-        Delivery::Distribute => DISTRIBUTE_BROADCAST,
+    let npdu = Npdu {
+        control: if expecting_reply { 0x04 } else { 0 },
+        // Hop count 255: routers decrement it to kill loops.
+        destination: dest.map(|d| Destination {
+            address: Address {
+                network: d.net,
+                mac: &d.mac,
+            },
+            hop_count: 0xFF,
+        }),
+        source: None,
+        body: Body::Apdu(apdu),
     };
-    let total = 4 + 2 + addressing.len() + apdu.len();
-    let mut out = vec![BVLC_TYPE, function];
-    out.extend(u16::try_from(total).unwrap_or(u16::MAX).to_be_bytes());
-    out.extend([0x01, control]);
-    out.extend(addressing);
-    out.extend_from_slice(apdu);
-    out
+    let mut octets = Vec::new();
+    npdu.encode(&mut octets);
+    Bvll::to_vec(match delivery {
+        Delivery::Unicast => Function::OriginalUnicast(&octets),
+        Delivery::Broadcast => Function::OriginalBroadcast(&octets),
+        Delivery::Distribute => Function::DistributeBroadcast(&octets),
+    })
 }
 
 /// Unwraps a datagram, borrowing it. `None` for anything that is not an APDU
 /// we can use: another BVLC function, a network-layer message, or a
-/// malformed frame.
+/// malformed frame. Octets past the BVLL length field are ignored, as the
+/// probe always has; a length past the datagram is malformed.
 #[must_use]
 pub fn decode(datagram: &[u8], peer: SocketAddr) -> Option<Incoming<'_>> {
-    if *datagram.first()? != BVLC_TYPE {
-        return None;
-    }
-    let len = usize::from(u16::from_be_bytes([*datagram.get(2)?, *datagram.get(3)?]));
-    let body = datagram.get(4..len)?;
-    let (from, delivery, npdu) = match *datagram.get(1)? {
-        ORIGINAL_UNICAST => (peer, Delivery::Unicast, body),
-        ORIGINAL_BROADCAST => (peer, Delivery::Broadcast, body),
-        DISTRIBUTE_BROADCAST => (peer, Delivery::Distribute, body),
-        FORWARDED_NPDU => {
-            let [a, b, c, d, p0, p1] = *body.get(..6)? else {
-                return None;
-            };
-            let origin = SocketAddrV4::new(Ipv4Addr::new(a, b, c, d), u16::from_be_bytes([p0, p1]));
-            (SocketAddr::V4(origin), Delivery::Broadcast, body.get(6..)?)
-        }
+    let declared = usize::from(u16::from_be_bytes([*datagram.get(2)?, *datagram.get(3)?]));
+    let bvll = Bvll::decode(datagram.get(..declared)?).ok()?;
+    let (from, delivery, npdu) = match bvll.function {
+        Function::OriginalUnicast(n) => (peer, Delivery::Unicast, n),
+        Function::OriginalBroadcast(n) => (peer, Delivery::Broadcast, n),
+        Function::DistributeBroadcast(n) => (peer, Delivery::Distribute, n),
+        Function::Forwarded { origin, npdu } => (SocketAddr::V4(origin), Delivery::Broadcast, npdu),
         _ => return None,
     };
-    if *npdu.first()? != 0x01 {
+    let npdu = Npdu::decode(npdu).ok()?;
+    // A network-layer message, e.g. I-Am-Router-To-Network, carries no APDU.
+    let Body::Apdu(apdu) = npdu.body else {
         return None;
-    }
-    let control = *npdu.get(1)?;
-    let mut pos = 2;
-    if control & 0x20 != 0 {
-        pos += address(npdu.get(pos..)?)?.1;
-    }
-    let source = if control & 0x08 != 0 {
-        let (route, size) = address(npdu.get(pos..)?)?;
-        pos += size;
-        Some(route)
-    } else {
-        None
     };
-    if control & 0x20 != 0 {
-        pos += 1; // Hop count.
-    }
-    if control & 0x80 != 0 {
-        return None; // Network-layer message, e.g. I-Am-Router-To-Network.
-    }
     Some(Incoming {
         from,
-        source,
+        source: npdu.source.map(|s| Route {
+            net: s.network,
+            mac: s.mac.to_vec(),
+        }),
         delivery,
-        apdu: npdu.get(pos..)?,
+        apdu,
     })
-}
-
-fn address(buf: &[u8]) -> Option<(Route, usize)> {
-    let net = u16::from_be_bytes([*buf.first()?, *buf.get(1)?]);
-    let len = usize::from(*buf.get(2)?);
-    let mac = buf.get(3..3 + len)?.to_vec();
-    Some((Route { net, mac }, 3 + len))
 }
 
 #[cfg(test)]

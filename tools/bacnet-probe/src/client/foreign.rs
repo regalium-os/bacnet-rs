@@ -6,16 +6,10 @@
 
 use super::Client;
 use crate::frame::{Delivery, bvll};
+use regalium_bacnet::ip::foreign::{Outcome, Registration};
 use regalium_bacnet_telemetry::Level;
 use std::net::SocketAddr;
-use std::time::{Duration, Instant};
 use std::{fmt, io};
-
-pub(crate) struct Registration {
-    bbmd: SocketAddr,
-    ttl: u16,
-    renew_at: Instant,
-}
 
 /// Why a registration failed.
 #[derive(Debug)]
@@ -74,38 +68,46 @@ impl Client {
         result
     }
 
+    /// Drives the driver's registration state machine until the BBMD
+    /// answers, or `retries` resends go unanswered.
     fn register_untraced(&mut self, bbmd: SocketAddr, ttl: u16) -> Result<(), ForeignError> {
-        let request = bvll::register_foreign_device(ttl);
-        for _ in 0..=self.retries {
-            self.send(&request, bbmd).map_err(ForeignError::Io)?;
-            let deadline = Instant::now() + self.timeout;
+        let SocketAddr::V4(v4) = bbmd else {
+            return Err(ForeignError::Io(io::ErrorKind::InvalidInput.into()));
+        };
+        let mut registration = Registration::new(v4, ttl).retry_after(self.timeout);
+        let mut sends = 0;
+        loop {
+            if let Some(request) = registration.poll(self.clock()) {
+                if sends > self.retries {
+                    return Err(ForeignError::Timeout);
+                }
+                sends += 1;
+                self.send(&request, bbmd).map_err(ForeignError::Io)?;
+            }
+            let deadline = self.origin + registration.deadline();
             while let Some((datagram, peer)) =
                 self.recv_until(deadline).map_err(ForeignError::Io)?
             {
-                match bvll::result_code(&datagram) {
-                    Some(0) if peer == bbmd => {
-                        // Renew inside the 30 s grace the BBMD adds (J.5.2.3).
-                        let renew = if ttl > 60 { ttl - 30 } else { ttl / 2 }.max(1);
-                        let renew_at = Instant::now() + Duration::from_secs(renew.into());
-                        self.foreign = Some(Registration {
-                            bbmd,
-                            ttl,
-                            renew_at,
-                        });
+                let (Some(code), SocketAddr::V4(from)) = (bvll::result_code(&datagram), peer)
+                else {
+                    continue;
+                };
+                match registration.result(from, code, self.clock()) {
+                    Some(Outcome::Registered { .. }) => {
+                        self.foreign = Some(registration);
                         return Ok(());
                     }
-                    Some(code) if peer == bbmd => return Err(ForeignError::Refused(code)),
-                    _ => {}
+                    Some(Outcome::Refused(code)) => return Err(ForeignError::Refused(code)),
+                    None => {}
                 }
             }
         }
-        Err(ForeignError::Timeout)
     }
 
     /// The BBMD this client is registered with, if any.
     #[must_use]
     pub fn bbmd(&self) -> Option<SocketAddr> {
-        self.foreign.as_ref().map(|r| r.bbmd)
+        self.foreign.as_ref().map(|r| SocketAddr::V4(r.bbmd()))
     }
 
     /// Renews the registration if it is due. Called by every other method,
@@ -116,9 +118,9 @@ impl Client {
     /// When the renewal fails; the old registration then lapses on the BBMD.
     pub fn maintain(&mut self) -> Result<(), ForeignError> {
         match &self.foreign {
-            Some(r) if Instant::now() >= r.renew_at => {
-                let (bbmd, ttl) = (r.bbmd, r.ttl);
-                self.register_foreign_device(bbmd, ttl)
+            Some(r) if self.clock() >= r.deadline() => {
+                let (bbmd, ttl) = (r.bbmd(), r.ttl());
+                self.register_foreign_device(SocketAddr::V4(bbmd), ttl)
             }
             _ => Ok(()),
         }

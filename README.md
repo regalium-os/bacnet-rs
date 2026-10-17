@@ -8,13 +8,12 @@ It is a library and a runtime, not an application: no global state, no hidden
 threads, and no clock the core reads behind your back. It is built to be
 imported by software that must keep talking to lift controllers for years.
 
-> **Status.** Phase 7 is complete: tags, primitive types, APDU, NPDU and
-> BVLL decode and re-encode **losslessly**; the **transaction state
-> machine** retries, segments and abandons on a fake clock; **Who-Is, I-Am
-> and `ReadProperty`** decode into the protobuf model; **BACnet/IP** sends
-> and receives, as a foreign device or a BBMD — each against a committed
-> corpus. The **field probe ships today**; the driver's first live read is
-> Phase 8, and the client code below is its target API.
+> **Status.** Phase 8 is complete: **the first live read**. The driver
+> discovers devices, routed ones included, and reads them over BACnet/IP —
+> codecs, transaction state machine, datalink and client, each against a
+> committed corpus — into the protobuf model. The **field probe** now frames
+> and transacts through the driver. COV, the poll scheduler and the other
+> services are next.
 
 ## Features
 
@@ -22,7 +21,7 @@ imported by software that must keep talking to lift controllers for years.
 | --- | --- | --- |
 | Core | tags, the 13 primitive types, APDU, NPDU, the client transaction state machine, Who-Is / I-Am / `ReadProperty` (**built**); the other services, object model — sans-io, lossless | Phases 3–6 |
 | BACnet/IP | Annex J: BVLL, BBMD, foreign device registration, the UDP link (**built**) | Phase 7 |
-| Runtime | discovery, polling, COV lifecycle, reconnection, offline as an event | Phase 8 |
+| Runtime | discovery, binding through routers, reads, offline as an event (**built**); polling, COV lifecycle, reconnection | Phase 8 |
 | Schema | `protobuf/` per Google AIP; prost, FlatBuffers and Cap'n Proto; conversion from the decoded services (**built**) | Phase 9 |
 | MS/TP | Clause 9 master node over RS-485 | planned |
 | BACnet/SC | Annex AB, WebSocket and TLS, hub and direct | planned |
@@ -64,39 +63,35 @@ normalises what a controller sent hides the reason a site does not work.
 
 ## A first look
 
+This runs today (`cargo run -p regalium-bacnet --example read`):
+
 ```rust
-use regalium_bacnet::{Client, ObjectType, PropertyId};
+use regalium_bacnet::Client;
+use regalium_bacnet::ip::BacnetIp;
+use regalium_bacnet::primitive::ObjectIdentifier;
+use regalium_bacnet::runtime::Config;
 use std::time::Duration;
 
-#[tokio::main]
-async fn main() -> Result<(), regalium_bacnet::Error> {
-    let client = Client::bind("0.0.0.0:47808").await?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let link = BacnetIp::bind("0.0.0.0:47808".parse()?)?;
+    let mut client = Client::new(link, Config::default());
 
     // Who-Is / I-Am: the exchange every BACnet network runs on.
-    for device in client.who_is().within(Duration::from_secs(3)).collect().await? {
-        println!("{} — {} at {}", device.instance(), device.name(), device.address());
+    for device in client.who_is(None, Duration::from_secs(3))? {
+        println!("{} at {}", device.instance, device.address);
     }
 
-    let device = client.bind_device(599).await?;
-    let temperature: f32 = client
-        .read_property(device, (ObjectType::AnalogInput, 1), PropertyId::PresentValue)
-        .await?
-        .try_into()?;
-
-    // Push rather than poll; the subscription's lifetime is renewed for you.
-    let mut changes = client
-        .subscribe_cov(device, (ObjectType::AnalogInput, 1))
-        .lifetime(Duration::from_secs(300))
-        .await?;
-    while let Some(change) = changes.next().await {
-        println!("{} = {}", change.property(), change.value());
-    }
+    let ai1 = ObjectIdentifier { object_type: 0, instance: 1 };
+    let reading = client.read_property(599, ai1, 85)?; // present-value
+    println!("{:?}", reading.primitive());
+    println!("{}", reading.property()?.name); // the protobuf resource
     Ok(())
 }
 ```
 
-`ReadPropertyMultiple`, serving as a local device, driving the core without
-the runtime, and the other datalinks are in **[docs/usage.md](docs/usage.md)**.
+Batches, events, driving the core without the runtime, and what is still
+planned — COV, `ReadPropertyMultiple`, serving — are in
+**[docs/usage.md](docs/usage.md)**.
 
 ## Architecture
 

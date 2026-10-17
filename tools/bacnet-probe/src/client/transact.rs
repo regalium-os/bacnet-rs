@@ -1,26 +1,25 @@
 // Copyright 2026 RegaliumOS™.
 // SPDX-License-Identifier: Apache-2.0
 
-//! The confirmed-request loop every service shares: send, retry, match the
-//! reply by invoke id, and keep whatever else arrives meanwhile.
+//! The confirmed-request loop every service shares, driven by the driver's
+//! transaction state machine: invoke ids, retries, segmented answers
+//! reassembled, and whatever else arrives meanwhile kept.
 
 use super::{Client, Device, ReadError};
 use crate::frame::{self, Delivery, Incoming};
 use crate::service::{self, confirmed, cov, unconfirmed};
 use crate::{metrics, names};
+use regalium_bacnet::apdu::Apdu;
+use regalium_bacnet::tsm::{self, Abandoned, Remote, Reply, Request, Step};
 use regalium_bacnet_telemetry::{Attribute, keys};
 use std::io;
-use std::time::Instant;
+use std::time::{Duration, Instant};
+
+/// The largest APDU BACnet/IP carries, and so the most a device behind it
+/// can be sent whatever it claims.
+const LINK_MAX_APDU: u16 = 1476;
 
 impl Client {
-    fn next_invoke(&mut self) -> u8 {
-        self.invoke = self.invoke.wrapping_add(1);
-        self.invoke
-    }
-
-    /// Sends a confirmed request and returns the Complex-ACK body, or an
-    /// empty body for a Simple-ACK. Records `bacnet.client.requests` and
-    /// `bacnet.client.request.duration`.
     pub(crate) fn confirm(
         &mut self,
         device: &Device,
@@ -28,26 +27,8 @@ impl Client {
         body: &[u8],
     ) -> Result<Vec<u8>, ReadError> {
         let _ = self.maintain();
-        let invoke = self.next_invoke();
-        let apdu = service::confirmed_request(invoke, service, body);
-        let packet = frame::encode(Delivery::Unicast, device.route.as_ref(), true, &apdu);
         let started = Instant::now();
-        let mut result = Err(ReadError::Timeout);
-        let mut attempts: u32 = 0;
-        for _ in 0..=self.retries {
-            attempts += 1;
-            if let Err(e) = self.send(&packet, device.addr) {
-                result = Err(e.into());
-                break;
-            }
-            match self.await_reply(device, invoke) {
-                Err(ReadError::Timeout) => {}
-                other => {
-                    result = other;
-                    break;
-                }
-            }
-        }
+        let (result, invoke, attempts) = self.transact(device, service, body);
         self.set(Attribute::int(keys::INVOKE_ID, invoke.into()));
         self.set(Attribute::int(keys::ATTEMPTS, attempts.into()));
         let outcome = result.as_ref().map_or_else(ReadError::outcome, |_| "ok");
@@ -69,42 +50,94 @@ impl Client {
         result
     }
 
-    fn await_reply(&mut self, device: &Device, invoke: u8) -> Result<Vec<u8>, ReadError> {
-        let deadline = Instant::now() + self.timeout;
-        while let Some((datagram, peer)) = self.recv_until(deadline)? {
-            let Some(msg) = frame::decode(&datagram, peer) else {
-                continue;
-            };
-            if self.unsolicited(&msg)? || msg.from != device.addr || msg.source != device.route {
-                continue;
-            }
-            let (Some(&pdu), Some(&id)) = (msg.apdu.first(), msg.apdu.get(1)) else {
-                continue;
-            };
-            let reason = msg.apdu.get(2).copied().unwrap_or_default();
-            let rest = || msg.apdu.get(3..).unwrap_or_default().to_vec();
-            match pdu >> 4 {
-                _ if id != invoke => {}
-                2 => return Ok(Vec::new()),
-                3 if pdu & 0x08 != 0 => {
-                    // Abort our side politely so the device stops resending segments.
-                    let abort = frame::encode(
-                        Delivery::Unicast,
-                        device.route.as_ref(),
-                        false,
-                        &[0x70, invoke, 4],
-                    );
-                    self.send(&abort, device.addr)?;
-                    return Err(ReadError::Segmented);
+    /// One request through the state machine, to its end: the result, the
+    /// invoke id it went under, and how many times it was sent.
+    fn transact(
+        &mut self,
+        device: &Device,
+        service: u8,
+        body: &[u8],
+    ) -> (Result<Vec<u8>, ReadError>, u8, u8) {
+        // The TUI edits the timeout and retries live; take them as they are.
+        let timers = tsm::Config::default()
+            .apdu_timeout(self.timeout)
+            .segment_timeout(self.timeout)
+            .retries(u8::try_from(self.retries).unwrap_or(u8::MAX));
+        self.tsm.reconfigure(timers);
+        let max_apdu =
+            u16::try_from(device.max_apdu).map_or(LINK_MAX_APDU, |m| m.min(LINK_MAX_APDU));
+        let request = Request::new(service, body.to_vec()).remote(Remote {
+            max_apdu,
+            ..Remote::default()
+        });
+        let Ok(invoke) = self.tsm.request(device.instance, request, self.clock()) else {
+            return (Err(ReadError::Segmented), 0, 0);
+        };
+        let mine = (device.instance, invoke);
+        let mut attempts = 1;
+        loop {
+            match self.tsm.poll(self.clock()) {
+                Step::Transmit { apdu, attempt, .. } => {
+                    attempts = attempts.max(attempt);
+                    let request = apdu.first().is_some_and(|o| o >> 4 == 0);
+                    let packet =
+                        frame::encode(Delivery::Unicast, device.route.as_ref(), request, &apdu);
+                    if let Err(e) = self.send(&packet, device.addr) {
+                        return (Err(e.into()), invoke, attempts);
+                    }
                 }
-                3 => return Ok(rest()),
-                5 => return Err(error_pdu(&rest())),
-                6 => return Err(ReadError::Reject(reason)),
-                7 => return Err(ReadError::Abort(reason)),
-                _ => {}
+                Step::Complete {
+                    peer,
+                    invoke: i,
+                    reply,
+                } if (peer, i) == mine => {
+                    return (answer(reply), invoke, attempts);
+                }
+                Step::Abandon {
+                    peer,
+                    invoke: i,
+                    reason,
+                } if (peer, i) == mine => {
+                    let e = match reason {
+                        Abandoned::Aborted(r) => ReadError::Abort(r),
+                        Abandoned::Timeout { .. } | Abandoned::SegmentTimeout => ReadError::Timeout,
+                    };
+                    return (Err(e), invoke, attempts);
+                }
+                // The end of a request an earlier call gave up on mid-way.
+                Step::Complete { .. } | Step::Abandon { .. } => {}
+                Step::Idle { wake_at } => {
+                    let wake = wake_at.unwrap_or_else(|| self.clock() + self.timeout);
+                    if let Err(e) = self.hear(device, self.origin + wake) {
+                        return (Err(e.into()), invoke, attempts);
+                    }
+                }
             }
         }
-        Err(ReadError::Timeout)
+    }
+
+    /// Waits until `deadline` for one datagram: a COV notification is kept,
+    /// anything from `device` goes to the state machine, the rest dropped.
+    fn hear(&mut self, device: &Device, deadline: Instant) -> io::Result<()> {
+        let Some((datagram, peer)) = self.recv_until(deadline)? else {
+            return Ok(());
+        };
+        let Some(msg) = frame::decode(&datagram, peer) else {
+            return Ok(());
+        };
+        if self.unsolicited(&msg)? || msg.from != device.addr || msg.source != device.route {
+            return Ok(());
+        }
+        if let Ok(apdu) = Apdu::decode(msg.apdu) {
+            let now = self.clock();
+            self.tsm.receive(device.instance, &apdu, now);
+        }
+        Ok(())
+    }
+
+    /// Time since the client was bound: the clock its state machines run on.
+    pub(crate) fn clock(&self) -> Duration {
+        self.origin.elapsed()
     }
 
     /// Keeps a COV notification that arrived out of turn, acknowledging a
@@ -133,6 +166,17 @@ impl Client {
             self.pending.push_back(n);
         }
         Ok(true)
+    }
+}
+
+/// What an answer means for a request.
+fn answer(reply: Reply) -> Result<Vec<u8>, ReadError> {
+    match reply {
+        Reply::Simple => Ok(Vec::new()),
+        Reply::Complex(body) => Ok(body),
+        Reply::Error(body) => Err(error_pdu(&body)),
+        Reply::Reject(r) => Err(ReadError::Reject(r)),
+        Reply::Abort(r) => Err(ReadError::Abort(r)),
     }
 }
 

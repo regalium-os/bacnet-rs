@@ -2280,6 +2280,7 @@ dependencies = [
  "clap",
  "prost-types",
  "ratatui",
+ "regalium-bacnet",
  "regalium-bacnet-schema",
  "regalium-bacnet-telemetry",
  "regalium-bacnet-telemetry-otel",

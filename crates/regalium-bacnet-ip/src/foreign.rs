@@ -72,6 +72,12 @@ impl Registration {
         self.bbmd
     }
 
+    /// The time-to-live asked for, in seconds.
+    #[must_use]
+    pub const fn ttl(&self) -> u16 {
+        self.ttl
+    }
+
     /// When [`Registration::poll`] next has something to send.
     #[must_use]
     pub const fn deadline(&self) -> Duration {

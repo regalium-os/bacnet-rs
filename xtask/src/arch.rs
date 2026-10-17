@@ -53,16 +53,20 @@ const DATALINKS: &[&str] = &[
 ];
 
 /// The field probe, an application at the edge: it records through the seam
-/// and exports through the adapter. It reaches no protocol layer because it
-/// carries its own small codec until the core can read a device (Phase 8);
-/// then it moves onto the facade, and this entry changes to say so.
+/// and exports through the adapter. Since Phase 8 it frames, transacts and
+/// registers through the driver — the facade — and keeps its own socket,
+/// because sweeping ranges at a set rate and capturing every datagram for
+/// its dissector are an application's business, not a datalink's. Its own
+/// service codecs remain only until the core has those services.
 ///
 /// It reaches the schema because it serves the API the schema declares —
 /// devices, objects and properties as AIP resources — over its own client,
-/// and is that API's only implementation until the runtime exists. The schema
-/// has no protocol code in it, so this widens what the probe speaks, not what
-/// it decodes.
-const PROBE: &[&str] = &["regalium-bacnet-telemetry-otel", "regalium-bacnet-schema"];
+/// and is that API's only implementation until the runtime exists.
+const PROBE: &[&str] = &[
+    "regalium-bacnet",
+    "regalium-bacnet-telemetry-otel",
+    "regalium-bacnet-schema",
+];
 
 /// The facade re-exports, so it reaches everything.
 const EVERYTHING: &[&str] = &[
