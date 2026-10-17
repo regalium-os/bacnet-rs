@@ -3,6 +3,7 @@
 
 //! `ReadProperty` and `ReadPropertyMultiple`.
 
+use super::observe::Target;
 use super::{Client, Device, ReadError};
 use crate::service::rpm::{self, Results, Spec};
 use crate::service::{PropertyRef, confirmed, read};
@@ -21,9 +22,12 @@ impl Client {
         property: u32,
         index: Option<u32>,
     ) -> Result<Vec<Value>, ReadError> {
-        let body = read::request(object, PropertyRef { property, index });
-        let ack = self.confirm(device, confirmed::READ_PROPERTY, &body)?;
-        read::decode_ack(&ack).ok_or(ReadError::Malformed)
+        let target = Target::of(device, object, Some(property));
+        self.request("bacnet.client.readProperty", &target, |c| {
+            let body = read::request(object, PropertyRef { property, index });
+            let ack = c.confirm(device, confirmed::READ_PROPERTY, &body)?;
+            read::decode_ack(&ack).ok_or(ReadError::Malformed)
+        })
     }
 
     /// Reads many properties of many objects in one round trip. Each
@@ -39,20 +43,26 @@ impl Client {
         device: &Device,
         specs: &[Spec],
     ) -> Result<Vec<Results>, ReadError> {
-        match self.confirm(
-            device,
-            confirmed::READ_PROPERTY_MULTIPLE,
-            &rpm::request(specs),
-        ) {
-            Ok(ack) => rpm::decode_ack(&ack).ok_or(ReadError::Malformed),
-            Err(e) => {
-                // unrecognized-service, or the services class saying the
-                // same: this device has no ReadPropertyMultiple at all.
-                if matches!(e, ReadError::Reject(9) | ReadError::Bacnet { class: 5, .. }) {
-                    self.no_rpm.insert(device.instance);
+        let first = specs
+            .first()
+            .map_or(ObjectId::new(8, device.instance), |s| s.object);
+        let target = Target::of(device, first, None);
+        self.request("bacnet.client.readPropertyMultiple", &target, |c| {
+            match c.confirm(
+                device,
+                confirmed::READ_PROPERTY_MULTIPLE,
+                &rpm::request(specs),
+            ) {
+                Ok(ack) => rpm::decode_ack(&ack).ok_or(ReadError::Malformed),
+                Err(e) => {
+                    // unrecognized-service, or the services class saying the
+                    // same: this device has no ReadPropertyMultiple at all.
+                    if matches!(e, ReadError::Reject(9) | ReadError::Bacnet { class: 5, .. }) {
+                        c.no_rpm.insert(device.instance);
+                    }
+                    Err(e)
                 }
-                Err(e)
             }
-        }
+        })
     }
 }

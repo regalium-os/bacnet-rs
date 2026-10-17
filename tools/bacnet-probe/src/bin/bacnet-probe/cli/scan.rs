@@ -7,7 +7,7 @@ use super::follow::{self, Follow, Point, Sink};
 use super::{json_out, parse_object, table};
 use crate::Result;
 use crate::args::{Format, Net, seconds};
-use bacnet_probe::metrics::{self, DeviceLabels};
+use bacnet_probe::metrics;
 use bacnet_probe::scan::{self, DeviceReport, Options};
 use bacnet_probe::{Client, ObjectId, names};
 use clap::Args;
@@ -90,23 +90,16 @@ pub(crate) fn run(client: &mut Client, net: &Net, args: &ScanArgs) -> Result {
 
 /// Everything a scan read, as metrics (a no-op without `--otlp`).
 fn record(client: &Client, report: &DeviceReport) {
-    let name = report.this.name();
+    let identity = client.identity_or(report.device.instance, &report.this.name());
     metrics::record_device(
         client.meter(),
         &report.device,
-        Some(&report.this),
+        &identity,
         true,
         report.object_count,
     );
     for o in &report.objects {
-        metrics::record_object(
-            client.meter(),
-            DeviceLabels {
-                instance: report.device.instance,
-                name: &name,
-            },
-            o,
-        );
+        metrics::record_object(client.meter(), &identity, o);
     }
 }
 

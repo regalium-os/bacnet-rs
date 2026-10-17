@@ -12,6 +12,12 @@
 
 use regalium_bacnet_telemetry::Instrument;
 
+// Units in braces are annotations (UCUM): they say what is counted without
+// claiming a physical unit, and the Prometheus translation leaves them out
+// of the series name. A unit of "1" means a dimensionless ratio, and earned
+// these gauges a `_ratio` suffix they are not: a 0/1 flag, a state code, and
+// a present-value whose real unit is its `bacnet.units` label.
+
 /// Confirmed requests sent, by service and outcome.
 pub const REQUESTS: Instrument = Instrument::counter(
     "bacnet.client.requests",
@@ -45,34 +51,37 @@ pub const COV_NOTIFICATIONS: Instrument = Instrument::counter(
 /// A point's present-value: analog as read, binary 0/1, multi-state its state number.
 pub const POINT_VALUE: Instrument = Instrument::gauge(
     "bacnet.point.value",
-    "1",
+    "{value}",
     "Present-value; the unit is the bacnet.units label",
 );
 /// One gauge per status flag, 1 when set.
 pub const POINT_STATUS: Instrument = Instrument::gauge(
     "bacnet.point.status",
-    "1",
+    "{flag}",
     "Status flags (in-alarm, fault, overridden, out-of-service), 1 when set",
 );
 /// `event-state` code: 0 normal, 1 fault, 2 offnormal, 3 high-limit, 4 low-limit.
-pub const POINT_EVENT_STATE: Instrument =
-    Instrument::gauge("bacnet.point.event_state", "1", "Event-state; 0 is normal");
+pub const POINT_EVENT_STATE: Instrument = Instrument::gauge(
+    "bacnet.point.event_state",
+    "{code}",
+    "Event-state; 0 is normal",
+);
 /// `reliability` code: 0 no-fault-detected.
 pub const POINT_RELIABILITY: Instrument = Instrument::gauge(
     "bacnet.point.reliability",
-    "1",
+    "{code}",
     "Reliability; 0 is no-fault-detected",
 );
 /// 1 when the last read of present-value succeeded.
 pub const POINT_REACHABLE: Instrument = Instrument::gauge(
     "bacnet.point.reachable",
-    "1",
+    "{flag}",
     "1 when the last present-value read succeeded",
 );
 /// 1 while a device answers.
 pub const DEVICE_UP: Instrument = Instrument::gauge(
     "bacnet.device.up",
-    "1",
+    "{flag}",
     "1 while the device answers requests",
 );
 /// Objects a device reports in its object-list.

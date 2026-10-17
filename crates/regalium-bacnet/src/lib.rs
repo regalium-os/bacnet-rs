@@ -21,3 +21,17 @@
 //! Owns: the public surface, and nothing else. No logic lives here.
 //!
 //! Allowed imports: every crate in the workspace.
+
+/// Tags (§20.2): lossless decoding and encoding of every element.
+pub use regalium_bacnet_core::tag;
+
+/// The thirteen primitive types (§20.2.2–§20.2.14).
+pub use regalium_bacnet_core::primitive;
+
+/// The telemetry seam every layer records through.
+pub use regalium_bacnet_telemetry as telemetry;
+
+/// The telemetry SDK binding: metrics and spans over OTLP. Opt-in, as it
+/// brings the SDK's native compression libraries.
+#[cfg(feature = "otel")]
+pub use regalium_bacnet_telemetry_otel::Otel;

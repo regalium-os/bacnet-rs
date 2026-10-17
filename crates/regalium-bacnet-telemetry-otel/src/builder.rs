@@ -17,6 +17,7 @@ pub struct Builder {
     otlp: Option<(String, u16)>,
     labels: Vec<(String, String)>,
     console: bool,
+    log_level: regalium_bacnet_telemetry::Level,
 }
 
 impl Builder {
@@ -27,6 +28,7 @@ impl Builder {
             otlp: None,
             labels: Vec::new(),
             console: false,
+            log_level: regalium_bacnet_telemetry::Level::Info,
         }
     }
 
@@ -43,6 +45,14 @@ impl Builder {
     #[must_use]
     pub fn label(mut self, key: &str, value: &str) -> Self {
         self.labels.push((key.to_owned(), value.to_owned()));
+        self
+    }
+
+    /// The least severe log line exported. Defaults to info; debug shows
+    /// every request and reply.
+    #[must_use]
+    pub fn log_level(mut self, level: regalium_bacnet_telemetry::Level) -> Self {
+        self.log_level = level;
         self
     }
 
@@ -82,15 +92,26 @@ impl Builder {
         for (key, value) in &self.labels {
             sdk = sdk.with_label(key.clone(), value.clone());
         }
-        let telemetry = sdk.build().map_err(|e| format!("telemetry SDK: {e}"))?;
+        let mut telemetry = sdk.build().map_err(|e| format!("telemetry SDK: {e}"))?;
         let meter = telemetry
             .meter_provider()
             .map(|p| p.meter("regalium-bacnet"));
+        // The SDK registers its tracer provider globally; a tracer from it
+        // starts children inside a parent's context, which the SDK's own
+        // span wrapper cannot.
+        let tracing_on = telemetry.tracing.take().is_some_and(|t| t.is_enabled());
+        let spans = super::tracer::Spans::new(
+            tracing_on.then(|| opentelemetry::global::tracer("regalium-bacnet")),
+        );
+        let logs =
+            super::logger::Logs::new(telemetry.logger.otel_logger().cloned(), self.log_level);
         drop(context);
         Ok(Otel {
             instruments: Instruments::new(meter),
             telemetry: Some(telemetry),
             runtime: Some(runtime),
+            spans,
+            logs,
         })
     }
 }

@@ -1,0 +1,31 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# The application-tagged encodings ASHRAE 135 §20.2 gives as examples, one
+# per primitive type, and the edges each type's length rule allows.
+# Each record: octets => what they mean. Every record round-trips exactly.
+
+00 => null
+10 => boolean false
+11 => boolean true
+21 48 => unsigned 72
+21 00 => unsigned 0
+24 ff ff ff ff => unsigned 4294967295
+31 48 => signed 72
+31 b8 => signed -72
+32 ff 7f => signed -129
+44 42 90 00 00 => real 72.0
+55 08 40 52 00 00 00 00 00 00 => double 72.0
+63 12 34 ff => octets 1234ff
+60 => octets (empty)
+75 19 00 54 68 69 73 20 69 73 20 61 20 42 41 43 6e 65 74 20 73 74 72 69 6e 67 21 => string "This is a BACnet string!"
+75 05 04 00 42 00 41 => string charset 4 "BA"
+82 03 a8 => bits 10101
+81 00 => bits (none)
+91 00 => enumerated 0
+94 ff ff ff ff => enumerated 4294967295
+a4 5b 01 18 04 => date 1991-01-24 weekday 4
+a4 ff ff ff 01 => date *-*-* weekday 1
+b4 11 23 2d 11 => time 17:35:45.17
+c4 00 c0 00 0f => object 3:15
+c4 02 3f ff ff => object 8:4194303

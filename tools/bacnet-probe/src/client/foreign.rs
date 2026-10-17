@@ -6,6 +6,7 @@
 
 use super::Client;
 use crate::frame::{Delivery, bvll};
+use regalium_bacnet_telemetry::Level;
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 use std::{fmt, io};
@@ -56,6 +57,24 @@ impl Client {
         bbmd: SocketAddr,
         ttl: u16,
     ) -> Result<(), ForeignError> {
+        let span = self.enter("bacnet.client.registerForeignDevice");
+        let result = self.register_untraced(bbmd, ttl);
+        match &result {
+            Ok(()) => self.log(
+                Level::Info,
+                &format_args!("registered with BBMD {bbmd} for {ttl} s"),
+                &[],
+            ),
+            Err(e) => self.log(Level::Warn, &format_args!("BBMD {bbmd}: {e}"), &[]),
+        }
+        self.exit(
+            span,
+            result.as_ref().err().map(|e| e as &dyn std::fmt::Display),
+        );
+        result
+    }
+
+    fn register_untraced(&mut self, bbmd: SocketAddr, ttl: u16) -> Result<(), ForeignError> {
         let request = bvll::register_foreign_device(ttl);
         for _ in 0..=self.retries {
             self.send(&request, bbmd).map_err(ForeignError::Io)?;

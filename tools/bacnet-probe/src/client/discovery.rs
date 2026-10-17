@@ -51,12 +51,8 @@ impl Client {
         )
     }
 
-    /// Runs a [`Discovery`], returning devices sorted by instance.
-    ///
-    /// # Errors
-    ///
-    /// When the socket fails.
-    pub fn discover(&mut self, plan: &Discovery) -> io::Result<Vec<Device>> {
+    /// The Who-Is sweep [`Client::discover`] wraps in its span.
+    pub(super) fn sweep_who_is(&mut self, plan: &Discovery) -> io::Result<Vec<Device>> {
         let apdu = service::unconfirmed_request(unconfirmed::WHO_IS, &who::who_is(plan.range));
         let single = plan.range.is_some_and(|(l, h)| l == h);
         let mut found = self.sweep(plan, &apdu, single, |msg| {
@@ -79,13 +75,10 @@ impl Client {
         Ok(found)
     }
 
-    /// Who-Has: which devices hold `wanted`. A device found this way did not
-    /// say how big an APDU it takes, so it is assumed to take 480 octets.
-    ///
-    /// # Errors
-    ///
-    /// When the socket fails.
-    pub fn who_has(
+    /// The Who-Has sweep [`Client::who_has`] wraps in its span. A device
+    /// found this way did not say how big an APDU it takes, so it is assumed
+    /// to take 480 octets.
+    pub(super) fn sweep_who_has(
         &mut self,
         plan: &Discovery,
         wanted: &Wanted,

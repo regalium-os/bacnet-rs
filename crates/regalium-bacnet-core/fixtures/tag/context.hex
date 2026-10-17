@@ -1,0 +1,16 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Context tags and constructed values (§20.2.1.3). A context tag's type is
+# the grammar's to know, so its contents are shown as octets.
+
+0a 01 00 => [0] 0100
+19 b8 => [1] b8
+0c 42 90 00 00 => [0] 42900000
+0e 0f => [0]{, }[0]
+1e 21 01 1f => [1]{, unsigned 1, }[1]
+0e 1e 21 05 1f 0f => [0]{, [1]{, unsigned 5, }[1], }[0]
+f9 21 48 => [33] 48
+fe 40 ff 40 => [64]{, }[64]
+65 05 01 02 03 04 05 => octets 0102030405
+65 fe 00 05 01 02 03 04 05 => octets 0102030405 (non-canonical)

@@ -45,6 +45,19 @@ pub(crate) fn api() -> bacnet_probe::api::Api {
     bacnet_probe::api::Api::new(client(), plan)
 }
 
+/// [`api`], with spans and log lines going to `tracer` and `logger`.
+pub(crate) fn api_observed(
+    tracer: Arc<dyn regalium_bacnet_telemetry::Tracer>,
+    logger: Arc<dyn regalium_bacnet_telemetry::Logger>,
+) -> bacnet_probe::api::Api {
+    use bacnet_probe::Discovery;
+    use bacnet_probe::frame::Delivery;
+    let addr = Sim::lift_gateway().spawn().unwrap();
+    let plan = Discovery::to(addr, Delivery::Unicast).with_wait(Duration::from_millis(300));
+    let client = client().with_tracer(tracer).with_logger(logger);
+    bacnet_probe::api::Api::new(client, plan)
+}
+
 /// The (error-class, error-code) a request was refused with; panics on
 /// success or any other failure, since a test calling this expects a refusal.
 pub(crate) fn refused<T: std::fmt::Debug>(result: Result<T, ReadError>) -> (u32, u32) {

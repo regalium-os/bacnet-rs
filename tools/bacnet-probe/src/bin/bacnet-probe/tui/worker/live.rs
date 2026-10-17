@@ -6,7 +6,7 @@
 //! cancellation when the selection moves on.
 
 use super::{Event, Job, Worker};
-use bacnet_probe::metrics::{self, DeviceLabels};
+use bacnet_probe::metrics;
 use bacnet_probe::{Device, ObjectId, property};
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
@@ -165,12 +165,10 @@ impl Worker {
             .get(&(instance, id))
             .cloned()
             .unwrap_or_default();
+        let identity = self.client.identity_or(instance, &device);
         metrics::record_value(
             self.client.meter(),
-            DeviceLabels {
-                instance,
-                name: &device,
-            },
+            &identity,
             id,
             &name,
             units,

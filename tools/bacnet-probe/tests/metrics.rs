@@ -8,7 +8,7 @@
 
 mod common;
 
-use bacnet_probe::metrics::{self, DeviceLabels};
+use bacnet_probe::metrics;
 use bacnet_probe::scan::{self, Options};
 use bacnet_probe::sim::{self, Sim};
 use std::sync::Arc;
@@ -67,12 +67,10 @@ fn a_scanned_point_is_exported_with_every_identifying_label() {
         |_, _| {},
     );
     let recorder = common::Recorder::default();
-    let labels = DeviceLabels {
-        instance: 599,
-        name: "Lift gateway (simulated)",
-    };
+    // The scan read the device's identity, and the client remembers it.
+    let identity = client.identity(599).cloned().expect("learnt from the scan");
     for o in &report.objects {
-        metrics::record_object(&recorder, labels, o);
+        metrics::record_object(&recorder, &identity, o);
     }
     let load = recorder.find(
         "bacnet.point.value",
@@ -81,7 +79,17 @@ fn a_scanned_point_is_exported_with_every_identifying_label() {
             ("bacnet.object.type", "analog-input"),
             ("bacnet.object.instance", "1"),
             ("bacnet.object.name", "Car 1 load"),
+            ("bacnet.object.kind", "analog"),
             ("bacnet.units", "kilograms"),
+            // Who the device is, on every point: a filter, not a join.
+            ("bacnet.device.name", "Lift gateway (simulated)"),
+            ("bacnet.vendor.name", "RegaliumOS simulator"),
+            ("bacnet.vendor.id", "999"),
+            ("bacnet.device.model", "probe-sim"),
+            ("bacnet.device.firmware", "1.0.0"),
+            ("bacnet.device.software", "sim 2026.10"),
+            ("bacnet.device.protocol_revision", "22"),
+            ("bacnet.device.location", "Machine room, level 12"),
         ],
     );
     assert_eq!(load.len(), 1);
@@ -124,14 +132,7 @@ fn a_value_is_never_a_label() {
     );
     let recorder = common::Recorder::default();
     for o in &report.objects {
-        metrics::record_object(
-            &recorder,
-            DeviceLabels {
-                instance: 599,
-                name: "",
-            },
-            o,
-        );
+        metrics::record_object(&recorder, &client.identity_or(599, ""), o);
     }
     let all = recorder.0.lock().unwrap();
     for (_, labels, _) in all.iter() {

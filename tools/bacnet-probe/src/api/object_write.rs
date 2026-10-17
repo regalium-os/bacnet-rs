@@ -33,36 +33,38 @@ impl Api {
         &mut self,
         req: &schema::CreateObjectRequest,
     ) -> Result<schema::Object, ApiError> {
-        let instance = name::parse_device(&req.parent)?;
-        let object = req
-            .object
-            .as_ref()
-            .ok_or_else(|| ApiError::invalid("an object to create"))?;
-        let kind = name::parse_object_type(&object.object_type).ok_or_else(|| {
-            ApiError::invalid(format!("{:?} is not an object type", object.object_type))
-        })?;
-        let what = if req.object_id.is_empty() {
-            Specifier::Type(kind)
-        } else {
-            let id = name::parse_object_segment(&req.object_id).ok_or_else(|| {
-                ApiError::invalid(format!("{:?} is not an object id", req.object_id))
+        self.call("bacnet.api.CreateObject", |api| {
+            let instance = name::parse_device(&req.parent)?;
+            let object = req
+                .object
+                .as_ref()
+                .ok_or_else(|| ApiError::invalid("an object to create"))?;
+            let kind = name::parse_object_type(&object.object_type).ok_or_else(|| {
+                ApiError::invalid(format!("{:?} is not an object type", object.object_type))
             })?;
-            if id.kind != kind {
-                return Err(ApiError::invalid(
-                    "object_id names a different type from object_type",
-                ));
-            }
-            Specifier::Id(id)
-        };
-        let initial = writes(object, &[])?;
-        let device = self.device(instance)?;
-        let created = self
-            .client
-            .create_object(&device, what, &initial)
-            .map_err(|e| ApiError::from_read(&req.parent, &e));
-        self.answered(instance, &created);
-        let id = created?;
-        Ok(self.read_objects(&device, &[id]).pop().unwrap_or_default())
+            let what = if req.object_id.is_empty() {
+                Specifier::Type(kind)
+            } else {
+                let id = name::parse_object_segment(&req.object_id).ok_or_else(|| {
+                    ApiError::invalid(format!("{:?} is not an object id", req.object_id))
+                })?;
+                if id.kind != kind {
+                    return Err(ApiError::invalid(
+                        "object_id names a different type from object_type",
+                    ));
+                }
+                Specifier::Id(id)
+            };
+            let initial = writes(object, &[])?;
+            let device = api.device(instance)?;
+            let created = api
+                .client
+                .create_object(&device, what, &initial)
+                .map_err(|e| ApiError::from_read(&req.parent, &e));
+            api.answered(instance, &created);
+            let id = created?;
+            Ok(api.read_objects(&device, &[id]).pop().unwrap_or_default())
+        })
     }
 
     /// `UpdateObject`: the masked fields, written in one request where the
@@ -75,29 +77,31 @@ impl Api {
         &mut self,
         req: &schema::UpdateObjectRequest,
     ) -> Result<schema::Object, ApiError> {
-        let object = req
-            .object
-            .as_ref()
-            .ok_or_else(|| ApiError::invalid("an object to update"))?;
-        let (instance, id) = name::parse_object(&object.name)?;
-        let paths: Vec<&str> = req
-            .update_mask
-            .as_ref()
-            .map(|m| m.paths.iter().map(String::as_str).collect())
-            .unwrap_or_default();
-        let values = writes(object, &paths)?;
-        if values.is_empty() {
-            return Err(ApiError::invalid(
-                "nothing to write: set a field, or name it in update_mask",
-            ));
-        }
-        let device = self.device(instance)?;
-        let result = self
-            .write_all(&device, id, values)
-            .map_err(|e| ApiError::from_read(&object.name, &e));
-        self.answered(instance, &result);
-        result?;
-        Ok(self.read_objects(&device, &[id]).pop().unwrap_or_default())
+        self.call("bacnet.api.UpdateObject", |api| {
+            let object = req
+                .object
+                .as_ref()
+                .ok_or_else(|| ApiError::invalid("an object to update"))?;
+            let (instance, id) = name::parse_object(&object.name)?;
+            let paths: Vec<&str> = req
+                .update_mask
+                .as_ref()
+                .map(|m| m.paths.iter().map(String::as_str).collect())
+                .unwrap_or_default();
+            let values = writes(object, &paths)?;
+            if values.is_empty() {
+                return Err(ApiError::invalid(
+                    "nothing to write: set a field, or name it in update_mask",
+                ));
+            }
+            let device = api.device(instance)?;
+            let result = api
+                .write_all(&device, id, values)
+                .map_err(|e| ApiError::from_read(&object.name, &e));
+            api.answered(instance, &result);
+            result?;
+            Ok(api.read_objects(&device, &[id]).pop().unwrap_or_default())
+        })
     }
 
     /// `DeleteObject`: `DeleteObject` (§15.4).
@@ -107,14 +111,16 @@ impl Api {
     /// The device's refusal, e.g. `FailedPrecondition` for an object its
     /// configuration depends on.
     pub fn delete_object(&mut self, req: &schema::DeleteObjectRequest) -> Result<(), ApiError> {
-        let (instance, id) = name::parse_object(&req.name)?;
-        let device = self.device(instance)?;
-        let result = self
-            .client
-            .delete_object(&device, id)
-            .map_err(|e| ApiError::from_read(&req.name, &e));
-        self.answered(instance, &result);
-        result
+        self.call("bacnet.api.DeleteObject", |api| {
+            let (instance, id) = name::parse_object(&req.name)?;
+            let device = api.device(instance)?;
+            let result = api
+                .client
+                .delete_object(&device, id)
+                .map_err(|e| ApiError::from_read(&req.name, &e));
+            api.answered(instance, &result);
+            result
+        })
     }
 
     fn write_all(

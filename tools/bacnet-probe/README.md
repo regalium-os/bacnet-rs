@@ -135,36 +135,23 @@ is read in a handful of round trips rather than one per property. A device
 without it is noticed once and read property by property; a request too big
 for the device is halved until it fits.
 
-## Metrics
+## Metrics, traces and logs
 
-Everything read becomes a series, labelled by *which* point it is — never by
-what it reads. Through an OpenTelemetry collector into Prometheus, for example:
+Everything read becomes a series, labelled by *which* point it is and by who
+its device is — name, vendor, model, firmware, protocol revision, location —
+never by what it reads:
 
 ```
-bacnet_point_value{bacnet_device_instance="599",bacnet_object_type="analog-input",
-  bacnet_object_instance="1",bacnet_object_name="Car 1 load",bacnet_units="kilograms"} 420
+bacnet_point_value{bacnet_device_firmware="1.0.0",bacnet_device_model="probe-sim",
+  bacnet_object_name="Car 1 load",bacnet_object_kind="analog",bacnet_units="kilograms"} 420
 ```
 
-| Instrument | Kind | Labels |
-| --- | --- | --- |
-| `bacnet.point.value` | gauge | device instance and name, object type, instance and name, units |
-| `bacnet.point.status` | gauge, 0/1 | the point's labels, and `bacnet.status.flag` (in-alarm, fault, overridden, out-of-service) |
-| `bacnet.point.event_state`, `bacnet.point.reliability` | gauge (code) | the point's labels |
-| `bacnet.point.reachable` | gauge, 0/1 | the point's labels |
-| `bacnet.device.up` | gauge, 0/1 | device instance and name, vendor, `server.address`, network |
-| `bacnet.device.objects` | gauge | device instance and name |
-| `bacnet.discovery.devices` | gauge | — |
-| `bacnet.client.requests` | counter | service, outcome, device instance |
-| `bacnet.client.request.duration` | histogram, ms | service, device instance |
-| `bacnet.client.packets`, `bacnet.client.bytes` | counter | direction |
-| `bacnet.cov.notifications` | counter | device instance |
-
-Binary points export 0/1, multi-state points their state number. Values go
-through the workspace's telemetry seam and the-protobuf-project telemetry
-SDK (`regalium-bacnet-telemetry-otel`): OTLP gRPC to `--otlp`, else to what
-`telemetry.toml` or `TELEMETRY_*` say. `OTEL_METRIC_EXPORT_INTERVAL` (ms) sets
-how often. `export` rediscovers every `--rescan` seconds (300), so a device
-that stops answering reads `bacnet.device.up 0` instead of vanishing.
+Every request is a span inside the call that made it, and every log line
+carries its trace and the same device labels. `export` runs headless and
+rediscovers every `--rescan` seconds (300), so a device that stops answering
+reads `bacnet.device.up 0` instead of vanishing. The labels, instruments,
+trace shape, log levels and an end-to-end loop with mock data are in
+**[docs/telemetry.md](docs/telemetry.md)**.
 
 ## Without hardware
 

@@ -28,5 +28,9 @@ regalium-bacnet-telemetry-otel = { workspace = true, optional = true }
 [features]
 otel = ["dep:regalium-bacnet-telemetry-otel"]
 
+[[example]]
+name = "otlp_spans"
+required-features = ["otel"]
+
 [lints]
 workspace = true

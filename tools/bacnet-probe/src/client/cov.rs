@@ -3,6 +3,7 @@
 
 //! COV subscriptions, and collecting the notifications they produce.
 
+use super::observe::Target;
 use super::{Client, Device, ReadError};
 use crate::frame;
 use crate::service::confirmed;
@@ -51,8 +52,14 @@ impl Client {
             confirmed: Some(false),
             lifetime: Some(lifetime),
         };
-        self.confirm(device, confirmed::SUBSCRIBE_COV, &cov::subscribe(&request))
-            .map(drop)
+        self.request(
+            "bacnet.client.subscribeCOV",
+            &Target::of(device, object, None),
+            |c| {
+                c.confirm(device, confirmed::SUBSCRIBE_COV, &cov::subscribe(&request))
+                    .map(drop)
+            },
+        )
     }
 
     /// Cancels subscription `process`, so the device stops sending.
@@ -73,8 +80,14 @@ impl Client {
             confirmed: None,
             lifetime: None,
         };
-        self.confirm(device, confirmed::SUBSCRIBE_COV, &cov::subscribe(&request))
-            .map(drop)
+        self.request(
+            "bacnet.client.cancelCOV",
+            &Target::of(device, object, None),
+            |c| {
+                c.confirm(device, confirmed::SUBSCRIBE_COV, &cov::subscribe(&request))
+                    .map(drop)
+            },
+        )
     }
 
     /// Every COV notification received so far, waiting up to `wait` for the

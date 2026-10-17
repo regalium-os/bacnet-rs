@@ -5,7 +5,7 @@
 //! record what they read as metrics on the way.
 
 use super::{Event, Job, Worker};
-use bacnet_probe::metrics::{self, DeviceLabels};
+use bacnet_probe::metrics;
 use bacnet_probe::scan::{self, ObjectReport};
 use bacnet_probe::{Device, ObjectId, props};
 
@@ -43,11 +43,13 @@ impl Worker {
             return self.emit(Event::DeviceDone(device.instance, false));
         };
         self.names.insert(device.instance, info.name());
+        let identity = bacnet_probe::Identity::from_report(device.instance, &info);
+        self.client.learn(identity.clone());
         let count = scan::object_count(&mut self.client, device);
         metrics::record_device(
             self.client.meter(),
             device,
-            Some(&info),
+            &identity,
             true,
             count.as_ref().ok().copied(),
         );
@@ -112,7 +114,8 @@ impl Worker {
     /// Records an object's readings as metrics (a no-op without `--otlp`).
     pub(super) fn record(&mut self, instance: u32, report: &ObjectReport) {
         let name = self.names.get(&instance).map_or("", String::as_str);
-        metrics::record_object(self.client.meter(), DeviceLabels { instance, name }, report);
+        let identity = self.client.identity_or(instance, name);
+        metrics::record_object(self.client.meter(), &identity, report);
         self.labels
             .insert((instance, report.id), (report.name(), report.units()));
     }

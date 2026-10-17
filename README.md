@@ -8,24 +8,24 @@ It is a library and a runtime, not an application: no global state, no hidden
 threads, and no clock the core reads behind your back. It is built to be
 imported by software that must keep talking to lift controllers for years.
 
-> **Status.** Phase 0 is complete: the workspace, the layer contracts and the
-> conformance gates exist and are enforced. The **field probe ships today**.
-> The driver itself **decodes no frame yet**: the code below is the target
-> API, written down so its shape can be argued with before it is built. The
-> tag codec lands in Phase 3, the first live read in Phase 8.
+> **Status.** Phase 3 is complete: the core's **tag codec and the thirteen
+> primitive types decode and re-encode losslessly**, against a committed
+> fixture corpus. The **field probe ships today**. The driver cannot read a
+> device yet: the client code below is the target API, written down so its
+> shape can be argued with before it is built. The first live read is Phase 8.
 
 ## Features
 
 | Area | Covers | State |
 | --- | --- | --- |
-| Core | tags, the 13 primitive types, APDU, NPDU, services, object model, transaction state machine — sans-io, lossless | Phases 3–6 |
+| Core | tags and the 13 primitive types (**built**); APDU, NPDU, services, object model, transaction state machine — sans-io, lossless | Phases 3–6 |
 | BACnet/IP | Annex J: BVLL, BBMD, foreign device registration | Phase 7 |
 | Runtime | discovery, polling, COV lifecycle, reconnection, offline as an event | Phase 8 |
 | Schema | `protobuf/` per Google AIP; prost, FlatBuffers and Cap'n Proto | Phase 9 |
 | MS/TP | Clause 9 master node over RS-485 | planned |
 | BACnet/SC | Annex AB, WebSocket and TLS, hub and direct | planned |
 | **BACnet/IPv6** | Annex U: multicast, virtual MAC addresses, BBMD — **[the full list](docs/ipv6.md)** | planned |
-| Telemetry | metrics seam and OTLP export; spans with Phase 3 | **built** in part |
+| Telemetry | metrics and spans through one seam, OTLP export; `trace_attrs!` | **built** |
 | Field probe | discover, browse, watch, write, create, delete, export, dissect; serves the API; TUI | **built** |
 | Gates | size, licence, purity, layering, dependencies — each proven to bite | **built** |
 

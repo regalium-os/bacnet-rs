@@ -44,7 +44,7 @@ pub struct Options {
 }
 
 /// The device object's properties worth a summary.
-pub const DEVICE_SUMMARY: [u32; 4] = [77, 121, 70, 44];
+pub const DEVICE_SUMMARY: [u32; 8] = crate::identity::IDENTITY_PROPS;
 
 /// Reads a whole device. `progress(done, of)` is called as objects arrive.
 pub fn device(
@@ -62,6 +62,8 @@ pub fn device(
     let this = read_many(client, device, &[(me, device_props)])
         .pop()
         .unwrap_or_default();
+    // From here on, every request to it is labelled with who it is.
+    client.learn(crate::Identity::from_report(device.instance, &this));
     let mut report = DeviceReport {
         device: device.clone(),
         this,

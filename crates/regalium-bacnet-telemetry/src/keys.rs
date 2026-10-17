@@ -59,3 +59,62 @@ pub const OUTCOME: Key = Key::declare("bacnet.outcome");
 
 /// `sent` or `received`.
 pub const DIRECTION: Key = Key::declare("bacnet.direction");
+
+/// Octets a tag decode was handed.
+pub const TAG_OCTETS: Key = Key::declare("bacnet.tag.octets");
+
+/// Elements it found.
+pub const TAG_ELEMENTS: Key = Key::declare("bacnet.tag.elements");
+
+/// Whether every header was spelled canonically. False marks a device that
+/// encodes the long way, which is legal and worth knowing.
+pub const TAG_CANONICAL: Key = Key::declare("bacnet.tag.canonical");
+
+/// A confirmed request's invoke id (§20.1.2.3): pairs it with its reply.
+pub const INVOKE_ID: Key = Key::declare("bacnet.invoke_id");
+
+/// How many times a request was sent before it was answered or abandoned.
+pub const ATTEMPTS: Key = Key::declare("bacnet.request.attempts");
+
+/// The error class a device refused with, by name: `property`, `object`.
+pub const ERROR_CLASS: Key = Key::declare("bacnet.error.class");
+
+/// The error code a device refused with, by name: `unknown-property`.
+pub const ERROR_CODE: Key = Key::declare("bacnet.error.code");
+
+/// The priority a write was made at, 1 to 16 (§19.2).
+pub const PRIORITY: Key = Key::declare("bacnet.write.priority");
+
+/// Datagrams a discovery sent.
+pub const DATAGRAMS: Key = Key::declare("bacnet.discovery.datagrams");
+
+/// Devices or objects a discovery found.
+pub const FOUND: Key = Key::declare("bacnet.discovery.found");
+
+/// Which pass of a repeating scenario this is.
+pub const CYCLE: Key = Key::declare("bacnet.cycle");
+
+/// How an API call ended: `ok`, or its status, `NotFound`, `Unavailable`.
+pub const API_STATUS: Key = Key::declare("bacnet.api.status");
+
+/// The vendor-identifier: ASHRAE's registry number for the vendor (§12.11).
+pub const VENDOR_ID: Key = Key::declare("bacnet.vendor.id");
+
+/// The model-name property of a device.
+pub const DEVICE_MODEL: Key = Key::declare("bacnet.device.model");
+
+/// The firmware-revision property of a device: "every device on 11.x".
+pub const DEVICE_FIRMWARE: Key = Key::declare("bacnet.device.firmware");
+
+/// The application-software-version property of a device.
+pub const DEVICE_SOFTWARE: Key = Key::declare("bacnet.device.software");
+
+/// The protocol-revision a device claims: revision 12 and revision 19 lift
+/// controllers have different object models.
+pub const PROTOCOL_REVISION: Key = Key::declare("bacnet.device.protocol_revision");
+
+/// The location property of a device: where the installer said it is.
+pub const DEVICE_LOCATION: Key = Key::declare("bacnet.device.location");
+
+/// What kind of point an object is: `analog`, `binary`, `multi-state`.
+pub const OBJECT_KIND: Key = Key::declare("bacnet.object.kind");

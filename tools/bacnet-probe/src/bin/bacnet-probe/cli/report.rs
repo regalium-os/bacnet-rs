@@ -5,7 +5,7 @@
 
 use super::follow::{Point, Sink};
 use super::json_out;
-use bacnet_probe::metrics::{self, DeviceLabels};
+use bacnet_probe::metrics;
 use bacnet_probe::{Client, Value, explain, names};
 use std::time::Instant;
 
@@ -17,13 +17,10 @@ pub(crate) fn report(
     sink: Sink,
     started: Instant,
 ) {
-    let device = DeviceLabels {
-        instance: p.device.instance,
-        name: &p.device_name,
-    };
+    let device = client.identity_or(p.device.instance, &p.device_name);
     metrics::record_value(
         client.meter(),
-        device,
+        &device,
         p.object,
         &p.name,
         p.units,

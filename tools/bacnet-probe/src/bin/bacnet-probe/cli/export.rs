@@ -48,7 +48,8 @@ pub(crate) fn run(client: &mut Client, net: &Net, args: &ExportArgs) -> Result {
             .filter(|k| !found.iter().any(|f| f.instance == k.instance))
         {
             eprintln!("device {} stopped answering", gone.instance);
-            metrics::record_device(client.meter(), gone, None, false, None);
+            let identity = client.identity_or(gone.instance, "");
+            metrics::record_device(client.meter(), gone, &identity, false, None);
         }
         let mut points = Vec::new();
         let options = Options {
@@ -59,22 +60,16 @@ pub(crate) fn run(client: &mut Client, net: &Net, args: &ExportArgs) -> Result {
         for device in &found {
             let report = scan::device(client, device, &options, |_, _| {});
             let name = report.this.name();
+            let identity = client.identity_or(device.instance, &name);
             metrics::record_device(
                 client.meter(),
                 device,
-                Some(&report.this),
+                &identity,
                 report.problem.is_none() || !report.objects.is_empty(),
                 report.object_count,
             );
             for o in &report.objects {
-                metrics::record_object(
-                    client.meter(),
-                    metrics::DeviceLabels {
-                        instance: device.instance,
-                        name: &name,
-                    },
-                    o,
-                );
+                metrics::record_object(client.meter(), &identity, o);
             }
             points.extend(
                 report

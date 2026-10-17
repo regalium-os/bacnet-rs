@@ -33,7 +33,9 @@ impl Client {
         let packet = frame::encode(Delivery::Unicast, device.route.as_ref(), true, &apdu);
         let started = Instant::now();
         let mut result = Err(ReadError::Timeout);
+        let mut attempts: u32 = 0;
         for _ in 0..=self.retries {
+            attempts += 1;
             if let Err(e) = self.send(&packet, device.addr) {
                 result = Err(e.into());
                 break;
@@ -46,6 +48,8 @@ impl Client {
                 }
             }
         }
+        self.set(Attribute::int(keys::INVOKE_ID, invoke.into()));
+        self.set(Attribute::int(keys::ATTEMPTS, attempts.into()));
         let outcome = result.as_ref().map_or_else(ReadError::outcome, |_| "ok");
         let service = names::confirmed_service(service);
         let instance = i64::from(device.instance);

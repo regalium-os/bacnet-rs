@@ -9,10 +9,10 @@
 //! whole seam — it says what the layers need, and
 //! `regalium-bacnet-telemetry-otel` attaches the SDK to it.
 //!
-//! Today that is [`Meter`]: declared [`Instrument`]s recorded with
-//! [`Attribute`]s built from the declared [`keys`]. The tracer and logger
-//! traits land with the phases that open the first spans (Phase 3, the tag
-//! codec), under the same rules.
+//! That is [`Meter`]: declared [`Instrument`]s recorded with [`Attribute`]s
+//! built from the declared [`keys`]; and [`Tracer`], whose spans record only
+//! what a type declares with [`trace_attrs!`], nested parent to child; and
+//! [`Logger`], whose lines carry the span they happened in.
 //!
 //! # Why this exists at commit one
 //!
@@ -24,10 +24,9 @@
 //!
 //! # Layer contract
 //!
-//! Owns: the meter trait and its no-op implementation, instrument and
-//! attribute declarations, and the attribute key constants. The tracer and
-//! logger traits, and the `trace_attrs!` declaration macro, join them with
-//! the first spans.
+//! Owns: the meter, tracer and logger traits and their no-op implementations, the
+//! span guard, instrument and attribute declarations, the attribute key
+//! constants, and the `trace_attrs!` declaration macro.
 //!
 //! Must not: perform I/O, read a clock, allocate on a no-op path, or name a
 //! type from any telemetry implementation. This crate has no dependencies and
@@ -59,7 +58,13 @@
 
 mod attribute;
 pub mod keys;
+mod logs;
 mod meter;
+mod trace;
+mod traced;
 
 pub use attribute::{Attribute, AttributeValue, Key};
+pub use logs::{Level, Logger, NoopLogger};
 pub use meter::{Instrument, Kind, Meter, NoopMeter};
+pub use trace::{NoopTracer, Span, SpanId, Tracer};
+pub use traced::{Field, Traced};

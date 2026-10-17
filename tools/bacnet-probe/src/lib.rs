@@ -40,6 +40,7 @@ pub mod client;
 pub mod dissect;
 pub mod explain;
 pub mod frame;
+pub mod identity;
 pub mod json;
 pub mod metrics;
 pub mod names;
@@ -51,6 +52,7 @@ pub mod sim;
 pub mod tag;
 
 pub use client::{Client, Device, Direction, Discovery, ForeignError, ReadError};
+pub use identity::Identity;
 pub use scope::Scope;
 pub use tag::{ObjectId, Value};
 

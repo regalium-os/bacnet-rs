@@ -1,0 +1,16 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Encodings the standard allows but a canonical encoder would not write: a
+# length spelled long, a tag number escaped needlessly, an integer with
+# leading octets it does not need. Each decodes to its value and re-encodes
+# to exactly these octets; only a fresh, canonical encoding is shorter.
+
+25 01 48 => unsigned 72 (non-canonical)
+22 00 48 => unsigned 72 (long)
+32 ff b8 => signed -72 (long)
+f9 02 48 => [2] 48 (non-canonical)
+f2 02 00 01 => unsigned 1 (non-canonical)
+# Escape 5 with a one-octet length: legal, long, and easy to misread as five
+# octets of contents. It is one octet, then three NULLs.
+95 01 00 00 00 00 => enumerated 0 (non-canonical), null, null, null

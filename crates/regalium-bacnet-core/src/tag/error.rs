@@ -1,0 +1,127 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+//! Why octets did not decode, and which octets.
+//!
+//! An error borrows the input: [`Error::bytes`] is the slice that could not
+//! be read, starting at the element that failed, so a caller logging it
+//! logs what the device sent rather than a description of it. Matching is
+//! on [`ErrorKind`], never on a message.
+
+use core::fmt;
+
+/// What was wrong.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ErrorKind {
+    /// The buffer ended inside a header or its contents: `needed` octets
+    /// were required from the start of the element, `available` were there.
+    Truncated {
+        /// Octets the element needs.
+        needed: usize,
+        /// Octets the buffer had.
+        available: usize,
+    },
+    /// An application tag used a length/value/type of 6 or 7, which only a
+    /// context tag may (§20.2.1.3.2, opening and closing tags).
+    ReservedLvt(u8),
+    /// The contents are the wrong length for the type: a REAL of 3 octets,
+    /// an Unsigned of 0 (§20.2.4–§20.2.14).
+    WrongLength {
+        /// Application tag number of the type being decoded.
+        tag: u8,
+        /// Octets the contents had.
+        len: usize,
+    },
+    /// The element is not the type asked for: a context tag where an
+    /// application one was expected, or an opening tag where a value was.
+    WrongTag,
+    /// The contents are the right length but not a valid value of the
+    /// type: a BOOLEAN of 2, a bit string claiming 9 unused bits.
+    InvalidValue {
+        /// Application tag number of the type being decoded.
+        tag: u8,
+    },
+    /// An opening tag without its closing tag, or a closing tag with no
+    /// opening one, or one closing a different number (§20.2.1.3.2).
+    Unbalanced,
+}
+
+/// A decode failure and the octets it happened at. Borrows the input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Error<'a> {
+    /// What was wrong.
+    pub kind: ErrorKind,
+    /// The input from the element that failed to the end of the buffer.
+    pub bytes: &'a [u8],
+    /// Where `bytes` starts within the buffer decoding was asked of.
+    pub offset: usize,
+}
+
+impl<'a> Error<'a> {
+    pub(crate) const fn new(kind: ErrorKind, bytes: &'a [u8], offset: usize) -> Self {
+        Self {
+            kind,
+            bytes,
+            offset,
+        }
+    }
+}
+
+impl fmt::Display for Error<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.kind {
+            ErrorKind::Truncated { needed, available } => {
+                write!(f, "truncated: {needed} octets needed, {available} present")?;
+            }
+            ErrorKind::ReservedLvt(lvt) => {
+                write!(f, "application tag with reserved length/value/type {lvt}")?;
+            }
+            ErrorKind::WrongLength { tag, len } => {
+                write!(f, "application type {tag} cannot be {len} octets")?;
+            }
+            ErrorKind::WrongTag => f.write_str("not the type expected here")?,
+            ErrorKind::InvalidValue { tag } => {
+                write!(f, "not a valid value of application type {tag}")?;
+            }
+            ErrorKind::Unbalanced => f.write_str("opening and closing tags do not pair")?,
+        }
+        write!(f, " at offset {}", self.offset)?;
+        for b in self.bytes.iter().take(8) {
+            write!(f, " {b:02x}")?;
+        }
+        if self.bytes.len() > 8 {
+            f.write_str(" …")?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for Error<'_> {}
+
+impl Error<'_> {
+    /// What went wrong and where, without the octets: what a span may
+    /// carry. The octets are equipment's data, and stay with the caller.
+    #[must_use]
+    pub fn reason(&self) -> Reason {
+        Reason {
+            kind: self.kind,
+            offset: self.offset,
+        }
+    }
+}
+
+/// An [`Error`] without its octets. See [`Error::reason`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Reason {
+    /// What was wrong.
+    pub kind: ErrorKind,
+    /// Where.
+    pub offset: usize,
+}
+
+impl fmt::Display for Reason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let full = Error::new(self.kind, &[], self.offset).to_string();
+        f.write_str(full.trim_end())
+    }
+}

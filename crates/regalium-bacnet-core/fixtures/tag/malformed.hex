@@ -1,0 +1,22 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# What a shared wire delivers when something is wrong. Each record names the
+# failure; none may panic. A value of the wrong length still decodes as an
+# element and round-trips, so it can be inspected; only its meaning fails.
+
+44 42 90 => error truncated 5/3
+f9 => error truncated 2/1
+65 => error truncated 2/1
+65 fe 00 => error truncated 4/3
+46 => error reserved-lvt 6
+0e 21 48 => error unbalanced
+0f => error unbalanced
+0e 1f => error unbalanced
+43 42 90 00 => real invalid
+12 => boolean invalid
+82 08 a8 => bits invalid
+81 01 => bits invalid
+82 01 => error truncated 3/2
+20 => unsigned invalid
+95 05 01 00 00 00 00 => enumerated invalid

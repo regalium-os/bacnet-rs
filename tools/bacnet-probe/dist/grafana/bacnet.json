@@ -1,0 +1,2845 @@
+{
+  "uid": "bacnet-probe",
+  "title": "BACnet \u2014 devices, points, requests, traces and logs",
+  "description": "Everything bacnet-probe and the driver report over OTLP: device identity and health, every point, BACnet requests and packets, traces and logs. Filters at the top narrow every panel.",
+  "tags": [
+    "bacnet",
+    "regalium",
+    "otlp"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "schemaVersion": 41,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "prometheus",
+        "label": "Metrics",
+        "type": "datasource",
+        "query": "prometheus",
+        "hide": 0,
+        "current": {}
+      },
+      {
+        "name": "loki",
+        "label": "Logs",
+        "type": "datasource",
+        "query": "loki",
+        "hide": 0,
+        "current": {}
+      },
+      {
+        "name": "tempo",
+        "label": "Traces",
+        "type": "datasource",
+        "query": "tempo",
+        "hide": 0,
+        "current": {}
+      },
+      {
+        "name": "job",
+        "label": "Service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_device_up, job)",
+          "refId": "job"
+        },
+        "definition": "label_values(bacnet_device_up, job)",
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "vendor",
+        "label": "Vendor",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_device_up{job=~\"$job\"}, bacnet_vendor_name)",
+          "refId": "vendor"
+        },
+        "definition": "label_values(bacnet_device_up{job=~\"$job\"}, bacnet_vendor_name)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\"}, bacnet_device_model)",
+          "refId": "model"
+        },
+        "definition": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\"}, bacnet_device_model)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "firmware",
+        "label": "Firmware",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\"}, bacnet_device_firmware)",
+          "refId": "firmware"
+        },
+        "definition": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\"}, bacnet_device_firmware)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "device",
+        "label": "Device",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\"}, bacnet_device_name)",
+          "refId": "device"
+        },
+        "definition": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\"}, bacnet_device_name)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\"}, bacnet_device_instance)",
+          "refId": "instance"
+        },
+        "definition": "label_values(bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\"}, bacnet_device_instance)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "kind",
+        "label": "Point kind",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_point_value, bacnet_object_kind)",
+          "refId": "kind"
+        },
+        "definition": "label_values(bacnet_point_value, bacnet_object_kind)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "units",
+        "label": "Units",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
+        "refresh": 2,
+        "query": {
+          "query": "label_values(bacnet_point_value{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_object_kind=\"analog\"}, bacnet_units)",
+          "refId": "units"
+        },
+        "definition": "label_values(bacnet_point_value{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_object_kind=\"analog\"}, bacnet_units)",
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 2
+      },
+      {
+        "name": "level",
+        "label": "Log level",
+        "type": "custom",
+        "query": "debug,info,warn,error",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [
+          {
+            "text": "debug",
+            "value": "debug",
+            "selected": false
+          },
+          {
+            "text": "info",
+            "value": "info",
+            "selected": false
+          },
+          {
+            "text": "warn",
+            "value": "warn",
+            "selected": false
+          },
+          {
+            "text": "error",
+            "value": "error",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "trace_id",
+        "label": "Trace ID",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "description": "Paste a trace ID (from a table below, or a log line's trace_id) to open it in the Trace panel"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Overview",
+      "id": 1,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Devices up",
+      "description": "Devices that answered their last read",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(max by (bacnet_device_instance) (bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\"})) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Devices down",
+      "description": "Discovered, but silent",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "count(max by (bacnet_device_instance) (bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\"}) == 0) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 3,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Points",
+      "description": "Points with a present-value",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "count(max by (bacnet_device_instance, bacnet_object_type, bacnet_object_instance) (bacnet_point_value{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"})) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 4,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "In alarm",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(max by (bacnet_device_instance, bacnet_object_type, bacnet_object_instance) (bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"in-alarm\"})) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "In fault",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(max by (bacnet_device_instance, bacnet_object_type, bacnet_object_instance) (bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"fault\"})) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 6,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Overridden",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(max by (bacnet_device_instance, bacnet_object_type, bacnet_object_instance) (bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"overridden\"})) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 7,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Out of service",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(max by (bacnet_device_instance, bacnet_object_type, bacnet_object_instance) (bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"out-of-service\"})) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Unreachable points",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "count(max by (bacnet_device_instance, bacnet_object_type, bacnet_object_instance) (bacnet_point_reachable{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"}) == 0) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 9,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Requests / s",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(rate(bacnet_client_requests_total{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 10,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Request errors",
+      "description": "Refusals, timeouts, rejects and aborts, as a share of requests",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "100 * sum(rate(bacnet_client_requests_total{job=~\"$job\", bacnet_device_instance=~\"$instance\", bacnet_outcome!=\"ok\"}[$__rate_interval])) / sum(rate(bacnet_client_requests_total{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 11,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "p95 latency",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(bacnet_client_request_duration_milliseconds_bucket{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 2000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 12,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "COV notifications / s",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(rate(bacnet_cov_notifications_total{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "time_series",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "id": 13,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 5
+      }
+    },
+    {
+      "type": "row",
+      "title": "Devices",
+      "id": 14,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Devices",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "description": "Every device discovery found, with what it says about itself \u2014 the Devices pane",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (bacnet_device_instance, bacnet_device_name, bacnet_vendor_name, bacnet_vendor_id, bacnet_device_model, bacnet_device_firmware, bacnet_device_software, bacnet_device_protocol_revision, bacnet_device_location, server_address, bacnet_network) (bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (bacnet_device_instance) (bacnet_device_objects{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\"})",
+          "legendFormat": "",
+          "refId": "B",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "bacnet_device_instance",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true
+            },
+            "renameByName": {
+              "bacnet_device_instance": "Instance",
+              "bacnet_device_name": "Name",
+              "bacnet_vendor_name": "Vendor",
+              "bacnet_vendor_id": "Vendor ID",
+              "bacnet_device_model": "Model",
+              "bacnet_device_firmware": "Firmware",
+              "bacnet_device_software": "Software",
+              "bacnet_device_protocol_revision": "Protocol rev.",
+              "bacnet_device_location": "Location",
+              "server_address": "Address",
+              "bacnet_network": "Network",
+              "Value #A": "State",
+              "Value #B": "Objects"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "up",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "0": {
+                        "text": "down",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 15,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Device availability",
+      "description": "Up and down over time: a reboot or a cut cable is a red band",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (bacnet_device_name, bacnet_device_instance) (bacnet_device_up{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\"})",
+          "legendFormat": "{{bacnet_device_name}} ({{bacnet_device_instance}})",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "up",
+                  "color": "green",
+                  "index": 0
+                },
+                "0": {
+                  "text": "down",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "id": 16,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "type": "row",
+      "title": "Points",
+      "id": 17,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Points",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "label_join(max by (bacnet_device_name, bacnet_device_instance, bacnet_object_type, bacnet_object_instance, bacnet_object_name, bacnet_object_kind, bacnet_units) (bacnet_point_value{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"}), \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\")",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (point) (label_join(bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"in-alarm\"}, \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\"))",
+          "legendFormat": "",
+          "refId": "B",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (point) (label_join(bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"fault\"}, \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\"))",
+          "legendFormat": "",
+          "refId": "C",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (point) (label_join(bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"overridden\"}, \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\"))",
+          "legendFormat": "",
+          "refId": "D",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (point) (label_join(bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_status_flag=\"out-of-service\"}, \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\"))",
+          "legendFormat": "",
+          "refId": "E",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (point) (label_join(bacnet_point_reachable{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"}, \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\"))",
+          "legendFormat": "",
+          "refId": "F",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (point) (label_join(bacnet_point_event_state{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"}, \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\"))",
+          "legendFormat": "",
+          "refId": "G",
+          "format": "table",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (point) (label_join(bacnet_point_reliability{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"}, \"point\", \"/\", \"bacnet_device_instance\", \"bacnet_object_type\", \"bacnet_object_instance\"))",
+          "legendFormat": "",
+          "refId": "H",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "Every point: present-value, status flags, event state and reliability \u2014 the Objects pane",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "point",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "point": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time 5": true,
+              "Time 6": true,
+              "Time 7": true,
+              "Time 8": true,
+              "Time": true
+            },
+            "renameByName": {
+              "bacnet_device_name": "Device",
+              "bacnet_device_instance": "Dev.",
+              "bacnet_object_type": "Type",
+              "bacnet_object_instance": "Inst.",
+              "bacnet_object_name": "Name",
+              "bacnet_object_kind": "Kind",
+              "bacnet_units": "Units",
+              "Value #A": "Value",
+              "Value #F": "Reachable",
+              "Value #G": "Event state",
+              "Value #H": "Reliability",
+              "Value #B": "In alarm",
+              "Value #C": "Fault",
+              "Value #D": "Overridden",
+              "Value #E": "Out of service"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In alarm"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "clear",
+                        "color": "transparent",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "SET",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Fault"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "clear",
+                        "color": "transparent",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "SET",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Overridden"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "clear",
+                        "color": "transparent",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "SET",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Out of service"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "clear",
+                        "color": "transparent",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "SET",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 95
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reachable"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "reachable",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "0": {
+                        "text": "unreachable",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 105
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Event state"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "normal",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "fault",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "offnormal",
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "high-limit",
+                        "color": "red",
+                        "index": 3
+                      },
+                      "4": {
+                        "text": "low-limit",
+                        "color": "red",
+                        "index": 4
+                      },
+                      "5": {
+                        "text": "life-safety-alarm",
+                        "color": "dark-red",
+                        "index": 5
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reliability"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "no-fault-detected",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "no-sensor",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "over-range",
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "under-range",
+                        "color": "orange",
+                        "index": 3
+                      },
+                      "4": {
+                        "text": "open-loop",
+                        "color": "red",
+                        "index": 4
+                      },
+                      "5": {
+                        "text": "shorted-loop",
+                        "color": "red",
+                        "index": 5
+                      },
+                      "7": {
+                        "text": "unreliable-other",
+                        "color": "red",
+                        "index": 6
+                      },
+                      "8": {
+                        "text": "process-error",
+                        "color": "red",
+                        "index": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Name",
+            "desc": false
+          }
+        ]
+      },
+      "id": 18,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Analog points in $units",
+      "description": "Present-values over time, one panel per unit, so an axis never mixes kilograms with degrees",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "bacnet_point_value{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_object_kind=\"analog\", bacnet_units=~\"$units\"}",
+          "legendFormat": "{{bacnet_object_name}} \u00b7 {{bacnet_device_name}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeat": "units",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "id": 19,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 32
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Binary and multi-state points",
+      "description": "A binary point's 0/1, a multi-state point's state number, over time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "bacnet_point_value{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\", bacnet_object_kind=~\"binary|multi-state\"}",
+          "legendFormat": "{{bacnet_object_name}} \u00b7 {{bacnet_device_name}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "id": 20,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Status flags set",
+      "description": "Only flags that were set during the range: in-alarm, fault, overridden, out-of-service",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "bacnet_point_status{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"} == 1",
+          "legendFormat": "{{bacnet_object_name}}: {{bacnet_status_flag}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "clear",
+                  "color": "transparent",
+                  "index": 0
+                },
+                "1": {
+                  "text": "SET",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "id": 21,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Point reachability",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "bacnet_point_reachable{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"}",
+          "legendFormat": "{{bacnet_object_name}} \u00b7 {{bacnet_device_name}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "reachable",
+                  "color": "green",
+                  "index": 0
+                },
+                "0": {
+                  "text": "unreachable",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "id": 22,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 47
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Event state",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "bacnet_point_event_state{job=~\"$job\", bacnet_vendor_name=~\"$vendor\", bacnet_device_model=~\"$model\", bacnet_device_firmware=~\"$firmware\", bacnet_device_name=~\"$device\", bacnet_device_instance=~\"$instance\", bacnet_object_kind=~\"$kind\"}",
+          "legendFormat": "{{bacnet_object_name}} \u00b7 {{bacnet_device_name}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "normal",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "fault",
+                  "color": "red",
+                  "index": 1
+                },
+                "2": {
+                  "text": "offnormal",
+                  "color": "orange",
+                  "index": 2
+                },
+                "3": {
+                  "text": "high-limit",
+                  "color": "red",
+                  "index": 3
+                },
+                "4": {
+                  "text": "low-limit",
+                  "color": "red",
+                  "index": 4
+                },
+                "5": {
+                  "text": "life-safety-alarm",
+                  "color": "dark-red",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "id": 23,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 47
+      }
+    },
+    {
+      "type": "row",
+      "title": "Requests and packets",
+      "id": 24,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests / s by service",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (bacnet_service) (rate(bacnet_client_requests_total{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{bacnet_service}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 25,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests / s by outcome",
+      "description": "ok, error (a refusal), timeout, reject, abort, segmented",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (bacnet_outcome) (rate(bacnet_client_requests_total{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{bacnet_outcome}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 26,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Request latency",
+      "description": "From request to final reply or give-up, retries included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, bacnet_service) (rate(bacnet_client_request_duration_milliseconds_bucket{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p50 {{bacnet_service}}",
+          "refId": "A",
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, bacnet_service) (rate(bacnet_client_request_duration_milliseconds_bucket{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p95 {{bacnet_service}}",
+          "refId": "B",
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, bacnet_service) (rate(bacnet_client_request_duration_milliseconds_bucket{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "p99 {{bacnet_service}}",
+          "refId": "C",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 27,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 62
+      }
+    },
+    {
+      "type": "heatmap",
+      "title": "Request latency distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (le) (increase(bacnet_client_request_duration_milliseconds_bucket{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{le}}",
+          "refId": "A",
+          "format": "heatmap"
+        }
+      ],
+      "options": {
+        "calculate": false,
+        "yAxis": {
+          "unit": "ms"
+        },
+        "color": {
+          "scheme": "Oranges",
+          "mode": "scheme"
+        },
+        "cellGap": 1
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "id": 28,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 62
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Packets / s",
+      "description": "Datagrams on the socket \u2014 the Packets tab",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (bacnet_direction) (rate(bacnet_client_packets_total{job=~\"$job\"}[$__rate_interval]))",
+          "legendFormat": "{{bacnet_direction}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 29,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 70
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Bytes / s",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (bacnet_direction) (rate(bacnet_client_bytes_total{job=~\"$job\"}[$__rate_interval]))",
+          "legendFormat": "{{bacnet_direction}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 30,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 70
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "COV notifications / s",
+      "description": "Change-of-value pushes received",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (bacnet_device_instance) (rate(bacnet_cov_notifications_total{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "device {{bacnet_device_instance}}",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 31,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 70
+      }
+    },
+    {
+      "type": "table",
+      "title": "Requests in range, by device, service and outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "round(sum by (bacnet_device_instance, bacnet_service, bacnet_outcome) (increase(bacnet_client_requests_total{job=~\"$job\", bacnet_device_instance=~\"$instance\"}[$__range])))",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "bacnet_device_instance": "Device",
+              "bacnet_service": "Service",
+              "bacnet_outcome": "Outcome",
+              "Value": "Requests"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Requests",
+            "desc": true
+          }
+        ]
+      },
+      "id": 32,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 77
+      }
+    },
+    {
+      "type": "row",
+      "title": "Traces",
+      "id": 33,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 84
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Recent traces",
+      "description": "Each scenario cycle, scan or call is one trace. Click a trace ID to open it",
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=~\"${job:regex}\"}",
+          "limit": 20,
+          "spss": 10,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm"
+      },
+      "id": 34,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 85
+      }
+    },
+    {
+      "type": "table",
+      "title": "Failed traces",
+      "description": "Traces with a span that ended in error: a refusal, a timeout",
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=~\"${job:regex}\" && status=error}",
+          "limit": 20,
+          "spss": 10,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm"
+      },
+      "id": 35,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 85
+      }
+    },
+    {
+      "type": "table",
+      "title": "Refused and failed BACnet requests",
+      "description": "Every request a device refused or did not answer, with what it was about and why",
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=~\"${job:regex}\" && name=~\"bacnet.client.*\" && status=error} | select(span.bacnet.device.instance, span.bacnet.object.type, span.bacnet.object.instance, span.bacnet.property.identifier, span.bacnet.error.code, span.bacnet.outcome)",
+          "limit": 20,
+          "spss": 10,
+          "tableType": "spans"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm"
+      },
+      "id": 36,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 94
+      }
+    },
+    {
+      "type": "table",
+      "title": "Slowest BACnet requests",
+      "description": "Requests over 50 ms: a slow trunk, or retries",
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{resource.service.name=~\"${job:regex}\" && name=~\"bacnet.client.*\" && duration > 50ms} | select(span.bacnet.device.instance, span.bacnet.object.type, span.bacnet.property.identifier, span.bacnet.request.attempts)",
+          "limit": 20,
+          "spss": 10,
+          "tableType": "spans"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm"
+      },
+      "id": 37,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 94
+      }
+    },
+    {
+      "type": "traces",
+      "title": "Trace ${trace_id}",
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "description": "Set the Trace ID variable at the top to open a trace here, nested the way the work was done",
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "refId": "A",
+          "queryType": "traceId",
+          "query": "${trace_id}"
+        }
+      ],
+      "id": 38,
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 103
+      }
+    },
+    {
+      "type": "row",
+      "title": "Logs",
+      "id": 39,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 115
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Log lines by level",
+      "description": "debug, info, warn and error, over time",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "refId": "A",
+          "expr": "sum by (detected_level) (count_over_time({service_name=~\"${job:regex}\"} [$__auto]))",
+          "legendFormat": "{{detected_level}}",
+          "queryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 40,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 116
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "description": "Every line, filtered by level and by the device labels above \u2014 the Log tab. Each carries trace_id: open it in the Trace panel",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "refId": "A",
+          "expr": "{service_name=~\"${job:regex}\"} | detected_level=~\"${level:regex}\" | bacnet_device_firmware=~\"${firmware:regex}\" | bacnet_device_model=~\"${model:regex}\" | bacnet_vendor_name=~\"${vendor:regex}\"",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      },
+      "id": 41,
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 122
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Warnings and errors",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki}"
+          },
+          "refId": "A",
+          "expr": "{service_name=~\"${job:regex}\"} | detected_level=~\"warn|error\"",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      },
+      "id": 42,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 134
+      }
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "title": "bacnet-rs",
+      "url": "https://github.com/regalium-os/bacnet-rs",
+      "type": "link",
+      "targetBlank": true
+    }
+  ]
+}

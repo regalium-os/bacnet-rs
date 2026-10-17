@@ -1,0 +1,12 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Service bodies as the probe captured them from a controller (the APDU
+# after the service choice), decoded as tags only.
+
+# ReadProperty request: device 599, object-name.
+0c 02 00 02 57 19 4d => [0] 02000257, [1] 4d
+# ReadProperty-ACK: analog-input 1 present-value = 100.0.
+0c 00 00 00 01 19 55 3e 44 42 c8 00 00 3f => [0] 00000001, [1] 55, [3]{, real 100.0, }[3]
+# A priority array: slot 8 holds 60.0, the rest are relinquished.
+3e 00 00 00 00 00 00 00 44 42 70 00 00 00 00 00 00 00 00 00 00 3f => [3]{, null, null, null, null, null, null, null, real 60.0, null, null, null, null, null, null, null, null, }[3]

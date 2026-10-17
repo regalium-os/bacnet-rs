@@ -48,8 +48,23 @@ fixtures:
         echo "no fixture corpus yet; the first lands in Phase 3 with the tag codec"
         exit 0
     fi
+    # The walkers compile their corpora in, so a file they do not name is a
+    # file nothing reads.
+    for f in $(find crates -name '*.hex' -o -name '*.kat'); do
+        if ! grep -rqs "$(basename "$f")" "$(dirname "$(dirname "$(dirname "$f")")")/tests"; then
+            echo "$f is not named by any fixture walker, so nothing decodes it"
+            exit 1
+        fi
+    done
     echo "walking $corpora corpora"
-    cargo test --workspace -- fixture
+    out=$(cargo test --workspace -- fixture 2>&1) || { echo "$out"; exit 1; }
+    # A filter that matches no test passes having checked nothing.
+    ran=$(echo "$out" | awk '/^test result:/ {n += $4} END {print n + 0}')
+    if [ "$ran" -eq 0 ]; then
+        echo "no fixture test ran over $corpora corpora; the walker was renamed or removed"
+        exit 1
+    fi
+    echo "$ran fixture test(s) passed"
 
 [group('test')]
 fuzz duration='60s':
@@ -151,6 +166,16 @@ cross:
 [doc('Check the probe for TARGET; needs a cross C compiler')]
 cross-probe target:
     cargo check --target {{target}} -p regalium-bacnet-probe -p regalium-bacnet-telemetry-otel
+
+# The BACnet dashboard, imported into a running Grafana: devices, points,
+# requests, traces and logs. Overwrites a dashboard with the same uid.
+[group('build')]
+[doc('Import the BACnet dashboard into Grafana at URL')]
+grafana url='http://localhost:6009/grafana' auth='admin:admin':
+    { printf '{"overwrite":true,"dashboard":'; cat tools/bacnet-probe/dist/grafana/bacnet.json; printf '}'; } \
+        | curl -sf -u '{{auth}}' -H 'Content-Type: application/json' \
+            -X POST '{{url}}/api/dashboards/db' --data @-
+    @echo
 
 # The probe, installed from this checkout.
 [group('build')]

@@ -19,9 +19,12 @@ mod cov;
 mod discovery;
 mod error;
 mod foreign;
+mod found;
+mod observe;
 mod plan;
 mod read;
 mod socket;
+mod target;
 mod transact;
 mod write;
 
@@ -31,8 +34,8 @@ pub use plan::Discovery;
 
 use crate::frame::Route;
 use crate::service::cov::Notification;
-use regalium_bacnet_telemetry::{Meter, NoopMeter};
-use std::collections::{HashSet, VecDeque};
+use regalium_bacnet_telemetry::{Logger, Meter, NoopLogger, NoopMeter, NoopTracer, SpanId, Tracer};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io;
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::Arc;
@@ -84,6 +87,15 @@ pub struct Client {
     retries: u32,
     trace: Option<Trace>,
     meter: Arc<dyn Meter>,
+    tracer: Arc<dyn Tracer>,
+    logger: Arc<dyn Logger>,
+    /// Open spans, innermost last: what a request is made inside.
+    stack: Vec<SpanId>,
+    /// What each device has said about itself, labelling its requests.
+    identities: HashMap<u32, crate::Identity>,
+    /// The device the latest request went to: who a log line written
+    /// after it, in the same call or step, is about.
+    last_device: Option<u32>,
     pending: VecDeque<Notification>,
     foreign: Option<foreign::Registration>,
     next_process: u32,
@@ -92,7 +104,7 @@ pub struct Client {
 
 impl Client {
     /// Binds `addr` with broadcast enabled. Defaults: 2 s timeout, 2 retries,
-    /// no trace, a no-op meter. Spawns nothing.
+    /// no trace, a no-op meter, tracer and logger. Spawns nothing.
     ///
     /// # Errors
     ///
@@ -107,6 +119,11 @@ impl Client {
             retries: 2,
             trace: None,
             meter: Arc::new(NoopMeter),
+            tracer: Arc::new(NoopTracer),
+            logger: Arc::new(NoopLogger),
+            stack: Vec::new(),
+            identities: HashMap::new(),
+            last_device: None,
             pending: VecDeque::new(),
             foreign: None,
             next_process: 1,

@@ -17,10 +17,13 @@
 //! Share it through a channel to its thread, never a lock held across calls.
 
 mod device;
+mod device_message;
 mod error;
 mod object;
+mod object_message;
 mod object_write;
 mod property;
+mod property_message;
 mod value;
 
 pub mod name;
@@ -29,6 +32,7 @@ pub use error::{ApiError, Code};
 pub use value::{from_schema, to_schema, values_to_schema};
 
 use crate::{Client, Device, Discovery};
+use regalium_bacnet_telemetry::{Attribute, Level, keys};
 use std::collections::BTreeMap;
 use std::time::SystemTime;
 
@@ -63,6 +67,33 @@ impl Api {
     /// The client underneath, for a caller that also follows values live.
     pub fn client(&mut self) -> &mut Client {
         &mut self.client
+    }
+
+    /// Runs one call inside a `bacnet.api.<Method>` span, a child of
+    /// whatever the client is inside: the `BACnet` requests the call makes are
+    /// its children. A failed call says so in its span and in a warning.
+    fn call<T>(
+        &mut self,
+        name: &'static str,
+        f: impl FnOnce(&mut Self) -> Result<T, ApiError>,
+    ) -> Result<T, ApiError> {
+        let span = self.client.enter(name);
+        let result = f(self);
+        let status = match &result {
+            Ok(_) => "ok".to_owned(),
+            Err(e) => format!("{:?}", e.code),
+        };
+        self.client.set(Attribute::str(keys::API_STATUS, &status));
+        if let Err(e) = &result {
+            let method = name.trim_start_matches("bacnet.api.");
+            self.client
+                .log(Level::Warn, &format_args!("{method}: {e}"), &[]);
+        }
+        self.client.exit(
+            span,
+            result.as_ref().err().map(|e| e as &dyn std::fmt::Display),
+        );
+        result
     }
 
     /// A device by instance: one discovery has found, or else one a ranged

@@ -3,6 +3,7 @@
 
 //! `bacnet.object.v1.PropertyService`: any property, read or written.
 
+use super::property_message::messages;
 use super::{Api, ApiError, name, next_token, page, value};
 use crate::scan::{self, ObjectReport};
 use crate::service::PropertyRef;
@@ -21,18 +22,20 @@ impl Api {
         &mut self,
         req: &schema::GetPropertyRequest,
     ) -> Result<schema::Property, ApiError> {
-        let (instance, id, prop) = name::parse_property(&req.name)?;
-        let device = self.device(instance)?;
-        let result = self
-            .client
-            .read_property(&device, id, prop, None)
-            .map_err(|e| ApiError::from_read(&req.name, &e));
-        self.answered(instance, &result);
-        Ok(schema::Property {
-            name: name::property(instance, id, prop),
-            value: Some(value::values_to_schema(&result?)),
-            read_time: Some(Timestamp::from(SystemTime::now())),
-            ..schema::Property::default()
+        self.call("bacnet.api.GetProperty", |api| {
+            let (instance, id, prop) = name::parse_property(&req.name)?;
+            let device = api.device(instance)?;
+            let result = api
+                .client
+                .read_property(&device, id, prop, None)
+                .map_err(|e| ApiError::from_read(&req.name, &e));
+            api.answered(instance, &result);
+            Ok(schema::Property {
+                name: name::property(instance, id, prop),
+                value: Some(value::values_to_schema(&result?)),
+                read_time: Some(Timestamp::from(SystemTime::now())),
+                ..schema::Property::default()
+            })
         })
     }
 
@@ -46,15 +49,17 @@ impl Api {
         &mut self,
         req: &schema::ListPropertiesRequest,
     ) -> Result<schema::ListPropertiesResponse, ApiError> {
-        let (instance, id) = name::parse_object(&req.parent)?;
-        let all = props::for_kind(id.kind);
-        let (start, size) = page(&req.page_token, req.page_size, 1000)?;
-        let end = (start + size).min(all.len());
-        let wanted = all.get(start..end).unwrap_or_default().to_vec();
-        let report = self.read_props(instance, id, &wanted)?;
-        Ok(schema::ListPropertiesResponse {
-            properties: messages(instance, &report, &wanted, false),
-            next_page_token: next_token(end, all.len()),
+        self.call("bacnet.api.ListProperties", |api| {
+            let (instance, id) = name::parse_object(&req.parent)?;
+            let all = props::for_kind(id.kind);
+            let (start, size) = page(&req.page_token, req.page_size, 1000)?;
+            let end = (start + size).min(all.len());
+            let wanted = all.get(start..end).unwrap_or_default().to_vec();
+            let report = api.read_props(instance, id, &wanted)?;
+            Ok(schema::ListPropertiesResponse {
+                properties: messages(instance, &report, &wanted, false),
+                next_page_token: next_token(end, all.len()),
+            })
         })
     }
 
@@ -68,21 +73,23 @@ impl Api {
         &mut self,
         req: &schema::BatchGetPropertiesRequest,
     ) -> Result<schema::BatchGetPropertiesResponse, ApiError> {
-        let (instance, id) = name::parse_object(&req.parent)?;
-        let wanted = req
-            .names
-            .iter()
-            .map(|n| match name::parse_property(n)? {
-                (i, o, p) if i == instance && o == id => Ok(p),
-                _ => Err(ApiError::invalid(format!(
-                    "{n} is not beneath {}",
-                    req.parent
-                ))),
+        self.call("bacnet.api.BatchGetProperties", |api| {
+            let (instance, id) = name::parse_object(&req.parent)?;
+            let wanted = req
+                .names
+                .iter()
+                .map(|n| match name::parse_property(n)? {
+                    (i, o, p) if i == instance && o == id => Ok(p),
+                    _ => Err(ApiError::invalid(format!(
+                        "{n} is not beneath {}",
+                        req.parent
+                    ))),
+                })
+                .collect::<Result<Vec<u32>, _>>()?;
+            let report = api.read_props(instance, id, &wanted)?;
+            Ok(schema::BatchGetPropertiesResponse {
+                properties: messages(instance, &report, &wanted, true),
             })
-            .collect::<Result<Vec<u32>, _>>()?;
-        let report = self.read_props(instance, id, &wanted)?;
-        Ok(schema::BatchGetPropertiesResponse {
-            properties: messages(instance, &report, &wanted, true),
         })
     }
 
@@ -99,40 +106,42 @@ impl Api {
         &mut self,
         req: &schema::UpdatePropertyRequest,
     ) -> Result<schema::Property, ApiError> {
-        let property = req
-            .property
-            .as_ref()
-            .ok_or_else(|| ApiError::invalid("a property to update"))?;
-        if let Some(mask) = &req.update_mask
-            && mask.paths.iter().any(|p| p != "value")
-        {
-            return Err(ApiError::invalid("only value is writable"));
-        }
-        let (instance, id, prop) = name::parse_property(&property.name)?;
-        let values = value::from_schema(
-            property
-                .value
+        self.call("bacnet.api.UpdateProperty", |api| {
+            let property = req
+                .property
                 .as_ref()
-                .ok_or_else(|| ApiError::invalid("a value to write"))?,
-        )?;
-        let priority = match property.write_priority {
-            0 => None,
-            p => Some(
-                u8::try_from(p)
-                    .ok()
-                    .filter(|p| (1..=16).contains(p))
-                    .ok_or_else(|| ApiError::invalid("write_priority is 1 to 16"))?,
-            ),
-        };
-        let device = self.device(instance)?;
-        let result = self
-            .client
-            .write_property(&device, id, PropertyRef::whole(prop), values, priority)
-            .map_err(|e| ApiError::from_read(&property.name, &e));
-        self.answered(instance, &result);
-        result?;
-        self.get_property(&schema::GetPropertyRequest {
-            name: property.name.clone(),
+                .ok_or_else(|| ApiError::invalid("a property to update"))?;
+            if let Some(mask) = &req.update_mask
+                && mask.paths.iter().any(|p| p != "value")
+            {
+                return Err(ApiError::invalid("only value is writable"));
+            }
+            let (instance, id, prop) = name::parse_property(&property.name)?;
+            let values = value::from_schema(
+                property
+                    .value
+                    .as_ref()
+                    .ok_or_else(|| ApiError::invalid("a value to write"))?,
+            )?;
+            let priority = match property.write_priority {
+                0 => None,
+                p => Some(
+                    u8::try_from(p)
+                        .ok()
+                        .filter(|p| (1..=16).contains(p))
+                        .ok_or_else(|| ApiError::invalid("write_priority is 1 to 16"))?,
+                ),
+            };
+            let device = api.device(instance)?;
+            let result = api
+                .client
+                .write_property(&device, id, PropertyRef::whole(prop), values, priority)
+                .map_err(|e| ApiError::from_read(&property.name, &e));
+            api.answered(instance, &result);
+            result?;
+            api.get_property(&schema::GetPropertyRequest {
+                name: property.name.clone(),
+            })
         })
     }
 
@@ -158,39 +167,5 @@ impl Api {
                     reads: Vec::new(),
                 }),
         )
-    }
-}
-
-/// Properties from a report. With `every`, a property the device left out
-/// is listed as unknown-property rather than dropped, since it was asked for.
-fn messages(instance: u32, r: &ObjectReport, wanted: &[u32], every: bool) -> Vec<schema::Property> {
-    let now = Some(Timestamp::from(SystemTime::now()));
-    wanted
-        .iter()
-        .filter_map(|&p| {
-            let read = r.reads.iter().find(|(q, _)| *q == p).map(|(_, v)| v);
-            let (value, error) = match read {
-                Some(Ok(v)) => (Some(value::values_to_schema(v)), None),
-                Some(Err(e)) => (None, Some(error_from(e))),
-                None if every => (None, Some(error_from("property: unknown-property"))),
-                None => return None,
-            };
-            Some(schema::Property {
-                name: name::property(instance, r.id, p),
-                value,
-                write_priority: 0,
-                error,
-                read_time: now,
-            })
-        })
-        .collect()
-}
-
-/// `class: code`, as the scan records a refusal, into the schema's error.
-fn error_from(text: &str) -> schema::PropertyError {
-    let (class, code) = text.split_once(": ").unwrap_or(("communication", text));
-    schema::PropertyError {
-        error_class: class.to_owned(),
-        error_code: code.to_owned(),
     }
 }

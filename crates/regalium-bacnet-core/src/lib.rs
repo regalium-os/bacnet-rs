@@ -45,3 +45,12 @@
 //! `bacnet.tag.{decode,encode}`, `bacnet.apdu.{decode,encode}`,
 //! `bacnet.npdu.{decode,route}`, `bacnet.service.<service>`,
 //! `bacnet.tsm.transaction`.
+//!
+//! # State
+//!
+//! Phase 3: [`tag`] and [`primitive`] are built, with the first fixture
+//! corpus under `fixtures/`. The modules after them in the table above land
+//! with the phases that follow.
+
+pub mod primitive;
+pub mod tag;

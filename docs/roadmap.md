@@ -24,8 +24,8 @@ listed in order without inventing numbers for it.
 | 0 | the workspace, layer contracts, conformance gates with negative tests, CI | **built** |
 | — | the telemetry seam's `Meter` and its SDK binding, ahead of the spans | **built** |
 | — | the field probe, on a codec of its own | **built** |
-| 3 | the tag codec and the primitive types; the first spans and fixture corpus | next |
-| 4 | APDU and NPDU | |
+| 3 | the tag codec and the primitive types; the first spans and fixture corpus | **built** |
+| 4 | APDU and NPDU | next |
 | 5 | the transaction state machine: invoke ids, retries, segmentation | |
 | 6 | `ReadProperty` and `Who-Is` / `I-Am` | |
 | 7 | BACnet/IP, Annex J | |
@@ -107,12 +107,16 @@ is implemented outside this repository. None interprets an APDU.
 
 ## Telemetry
 
-- **Built**: the seam's `Meter`, instruments, attributes and declared keys
-  (`regalium-bacnet-telemetry`, no dependencies), and its binding to the
-  the-protobuf-project SDK with OTLP export (`regalium-bacnet-telemetry-otel`).
-- **Next**, with the first spans in Phase 3: the tracer and logger traits,
-  and `trace_attrs!`, through which an undeclared field cannot be recorded.
-  Spans are `bacnet.<layer>.<operation>`; each crate's contract lists its own.
+- **Built**: the seam's `Meter` and `Tracer`, instruments, attributes and
+  declared keys, and `trace_attrs!`, through which an undeclared field cannot
+  be recorded (`regalium-bacnet-telemetry`, no dependencies); and its binding
+  to the the-protobuf-project SDK, metrics and spans, with OTLP export
+  (`regalium-bacnet-telemetry-otel`). The first spans are the tag layer's
+  `bacnet.tag.{decode,encode}`, which record size, element count and
+  canonicity, and never a value.
+- **Next**: the logger trait, with the first layer that has something to
+  log. Spans are `bacnet.<layer>.<operation>`; each crate's contract lists
+  its own.
 
 ## The field probe
 

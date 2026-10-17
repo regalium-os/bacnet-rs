@@ -19,6 +19,8 @@ authors.workspace = true
 regalium-bacnet-telemetry.workspace = true
 telemetry.workspace = true
 opentelemetry.workspace = true
+# The tracer type `Otel::from_tracer` takes; already in the graph through the SDK.
+opentelemetry_sdk = { version = "0.32", default-features = false, features = ["trace", "logs"] }
 # The SDK's OTLP gRPC exporter runs its connection tasks on a Tokio runtime;
 # this crate owns that runtime so its caller need not be async.
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread"] }
@@ -28,7 +30,7 @@ log = "0.4"
 
 [dev-dependencies]
 # An in-memory exporter, to prove labels reach the SDK intact.
-opentelemetry_sdk = { version = "0.32", default-features = false, features = ["metrics", "testing"] }
+opentelemetry_sdk = { version = "0.32", default-features = false, features = ["metrics", "trace", "logs", "testing"] }
 
 [lints]
 workspace = true

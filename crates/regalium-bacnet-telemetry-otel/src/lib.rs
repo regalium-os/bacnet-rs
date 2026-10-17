@@ -12,6 +12,13 @@
 //! them — there is no structural adapter to be had, unlike `osdp-go`, whose
 //! Go SDK exposes a method value that can be matched by shape.
 //!
+//! # Spans
+//!
+//! [`Otel`] implements the seam's [`Tracer`](regalium_bacnet_telemetry::Tracer)
+//! over the SDK's spans, holding each open one under the number the seam
+//! knows it by. Attributes arrive only through `trace_attrs!` declarations,
+//! so what reaches the exporter is what a layer declared.
+//!
 //! # Metrics
 //!
 //! [`Otel`] implements the seam's [`Meter`]. Each declared
@@ -41,6 +48,8 @@
 
 mod bridge;
 mod builder;
+mod logger;
+mod tracer;
 
 use bridge::Instruments;
 pub use builder::Builder;
@@ -61,6 +70,8 @@ pub struct Otel {
     instruments: Instruments,
     telemetry: Option<telemetry::Telemetry>,
     runtime: Option<tokio::runtime::Runtime>,
+    spans: tracer::Spans,
+    logs: logger::Logs,
 }
 
 impl Otel {
@@ -79,7 +90,38 @@ impl Otel {
             instruments: Instruments::new(Some(meter)),
             telemetry: None,
             runtime: None,
+            spans: tracer::Spans::default(),
+            logs: logger::Logs::default(),
         }
+    }
+
+    /// Records spans into an OpenTelemetry tracer the caller owns, with no
+    /// SDK pipeline of ours and no metrics — for tests, or an application
+    /// that already runs its own provider.
+    #[must_use]
+    pub fn from_tracer(tracer: opentelemetry_sdk::trace::Tracer) -> Self {
+        Self {
+            instruments: Instruments::new(None),
+            telemetry: None,
+            runtime: None,
+            spans: tracer::Spans::new(Some(opentelemetry::global::BoxedTracer::new(Box::new(
+                tracer,
+            )))),
+            logs: logger::Logs::default(),
+        }
+    }
+
+    /// Sends log lines at `min` and above to `logger`, a pipeline the
+    /// caller owns — for tests, or an application with its own provider.
+    #[must_use]
+    pub fn with_logger(
+        mut self,
+        logger: opentelemetry_sdk::logs::SdkLogger,
+        min: regalium_bacnet_telemetry::Level,
+    ) -> Self {
+        let sink = telemetry::logging::OtelLogger::new(logger);
+        self.logs = logger::Logs::new(Some(std::sync::Arc::new(sink)), min);
+        self
     }
 
     /// Whether recordings go anywhere. False when the SDK was configured with
@@ -129,5 +171,9 @@ impl Drop for Otel {
     }
 }
 
+#[cfg(test)]
+mod log_tests;
+#[cfg(test)]
+mod span_tests;
 #[cfg(test)]
 mod tests;
