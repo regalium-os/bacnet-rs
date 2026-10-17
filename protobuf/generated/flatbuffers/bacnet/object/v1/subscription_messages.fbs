@@ -8,6 +8,7 @@
 // field slots below are recorded in buffers.lock; edit the .proto, not this file
 //
 // https://github.com/the-protobuf-project/buffers
+include "bacnet/object/v1/event.fbs";
 include "bacnet/object/v1/subscription.fbs";
 
 namespace bacnet.object.v1;
@@ -20,4 +21,7 @@ table StreamNotificationsResponse {
   /// Notifications discarded since the previous response because the reader
   /// fell behind. Non-zero means a value was missed, not merely delayed.
   dropped_count:long (id: 1);
+  /// Alarms and events devices reported, oldest first: the event
+  /// notifications that arrive on the same stream as changes of value.
+  events:[Event] (id: 2);
 }

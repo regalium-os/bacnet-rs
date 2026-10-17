@@ -1,0 +1,24 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# BVLL-IPv6 (Annex U.2), each function as Wireshark's packet-bvlc.c lays it
+# out: type 82, function, length, the sender's virtual MAC, then the
+# function's fields. 000257 is device 599's VMAC; 00000a device 10's.
+
+82 02 00 0f 00 02 57 01 20 ff ff 00 ff 10 08 => original-broadcast from 000257 npdu 0120ffff00ff1008
+82 01 00 0e 00 02 57 00 00 0a 01 00 10 08 => original-unicast from 000257 to 00000a npdu 01001008
+82 03 00 0a 00 02 57 00 00 0a => address-resolution from 000257 for 00000a
+82 05 00 0a 00 00 0a 00 02 57 => address-resolution-ack from 00000a to 000257
+82 06 00 07 00 02 57 => virtual-address-resolution from 000257
+82 07 00 0a 00 00 0a 00 02 57 => virtual-address-resolution-ack from 00000a to 000257
+# A BBMD relaying a foreign device's resolution, with the asker's address.
+82 04 00 1c 00 02 57 00 00 0a fe 80 00 00 00 00 00 00 00 00 00 00 00 00 00 01 ba c0 => forwarded-address-resolution from 000257 for 00000a origin [fe80::1]:47808
+82 08 00 1d 00 02 57 20 01 0d b8 00 00 00 00 00 00 00 00 00 00 00 05 ba c0 01 00 10 08 => forwarded from 000257 origin [2001:db8::5]:47808 npdu 01001008
+82 09 00 09 00 02 57 00 3c => register-foreign-device from 000257 ttl 60
+82 0a 00 19 00 02 57 20 01 0d b8 00 00 00 00 00 00 00 00 00 00 00 05 ba c0 => delete-fdt-entry from 000257 [2001:db8::5]:47808
+82 00 00 09 00 02 57 00 00 => result from 000257 0x0000
+82 00 00 09 00 02 57 00 90 => result from 000257 0x0090
+82 0c 00 0f 00 02 57 01 20 ff ff 00 ff 10 08 => distribute-broadcast from 000257 npdu 0120ffff00ff1008
+# Secure-BVLL alone carries no virtual MAC.
+82 0b 00 06 aa bb => secure-bvll data aabb
+82 0d 00 08 00 02 57 01 => unknown 13 from 000257 data 01

@@ -13,6 +13,9 @@ authors.workspace = true
 
 [dependencies]
 regalium-bacnet-core.workspace = true
+# Without its default libudev feature: port enumeration is what needs C, and
+# a port is opened by the name it is configured with.
+serialport = { version = "4.10", default-features = false }
 regalium-bacnet-telemetry.workspace = true
 
 [lints]

@@ -1,0 +1,15 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Datagrams that are not well-formed BACnet/IPv6. None may panic; a length
+# field that disagrees with the datagram is kept, so the sender can be found.
+
+82 01 => error truncated 4/2
+81 0a 00 04 => error not-bacnet-ipv6 129
+82 02 00 06 00 02 => error truncated 7/6
+82 00 00 0a 00 02 57 00 00 00 => error wrong-length 0/3
+82 03 00 09 00 02 57 00 00 => error wrong-length 3/2
+82 01 00 09 00 02 57 00 00 => error wrong-length 1/2
+82 08 00 0b 00 02 57 fe 80 00 00 => error wrong-length 8/4
+82 06 00 08 00 02 57 00 => error wrong-length 6/1
+82 02 00 20 00 02 57 01 00 10 08 => original-broadcast from 000257 npdu 01001008 (length 32, datagram 11)

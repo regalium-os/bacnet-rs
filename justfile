@@ -67,10 +67,17 @@ fixtures:
     echo "$ran fixture test(s) passed"
 
 [group('test')]
-fuzz duration='60s':
+[doc('Fuzz every decoder for DURATION seconds each, on nightly')]
+fuzz duration='60':
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "fuzz targets land in Phase 17; {{duration}} each once they exist"
+    # libFuzzer needs nightly; put its rustc ahead of any other on PATH.
+    export PATH="$(dirname "$(rustup which --toolchain nightly rustc)"):$PATH"
+    cd fuzz
+    for target in $(cargo fuzz list); do
+        echo "fuzz $target for {{duration}} s"
+        cargo fuzz run "$target" -- -max_total_time={{duration}}
+    done
 
 # --- lint ------------------------------------------------------------------
 

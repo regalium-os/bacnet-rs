@@ -1,0 +1,86 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Fuzz targets for every decoder (Phase 17). A workspace of its own: libFuzzer
+# is C++, and keeping it here keeps it out of the driver's graph, which the
+# deps gate holds free of C. Run with `just fuzz`, on nightly.
+
+[package]
+name = "regalium-bacnet-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+regalium-bacnet = { path = "../crates/regalium-bacnet" }
+
+[[bin]]
+name = "tag"
+path = "fuzz_targets/tag.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pdu"
+path = "fuzz_targets/pdu.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "service"
+path = "fuzz_targets/service.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bvll"
+path = "fuzz_targets/bvll.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tsm"
+path = "fuzz_targets/tsm.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "server"
+path = "fuzz_targets/server.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "value"
+path = "fuzz_targets/value.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bvll6"
+path = "fuzz_targets/bvll6.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mstp"
+path = "fuzz_targets/mstp.rs"
+test = false
+doc = false
+bench = false

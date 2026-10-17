@@ -1,0 +1,12 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Octets that are not a frame. None may panic, and each is refused for the
+# reason it fails, so noise on a line can be told from a station sending it.
+
+55 ff 06 10 05 => error truncated 8
+55 ff 06 10 05 00 03 9c 01 22 => error truncated 13
+55 fe 00 10 05 00 00 8c => error no-preamble
+55 ff 06 10 04 00 03 9c 01 22 30 10 bd => error header-crc
+55 ff 06 10 05 00 03 9c 01 23 30 10 bd => error data-crc
+55 ff 21 06 05 00 07 bd 57 54 57 5d 55 a2 aa 03 ae => error encoding

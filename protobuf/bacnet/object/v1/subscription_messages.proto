@@ -5,6 +5,7 @@ syntax = "proto3";
 
 package bacnet.object.v1;
 
+import "bacnet/object/v1/event.proto";
 import "bacnet/object/v1/subscription.proto";
 import "buf/validate/validate.proto";
 import "google/api/field_behavior.proto";
@@ -105,4 +106,8 @@ message StreamNotificationsResponse {
   // Notifications discarded since the previous response because the reader
   // fell behind. Non-zero means a value was missed, not merely delayed.
   int64 dropped_count = 2;
+
+  // Alarms and events devices reported, oldest first: the event
+  // notifications that arrive on the same stream as changes of value.
+  repeated Event events = 3;
 }

@@ -1,0 +1,22 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# MS/TP frames (Clause 9.3): preamble 55 ff, type, destination, source,
+# length, header CRC, then data and its CRC. The first two are the worked
+# examples of Annex G: header CRC 8c, and data CRC 10 bd sent low octet first.
+
+55 ff 00 10 05 00 00 8c => token to 16 from 5
+55 ff 06 10 05 00 03 9c 01 22 30 10 bd => data-not-expecting-reply to 16 from 5 data 012230
+# Finding a successor, and the answer.
+55 ff 01 06 05 00 00 b1 => poll-for-master to 6 from 5
+55 ff 02 05 06 00 00 0b => reply-to-poll-for-master to 5 from 6
+# A ReadProperty request for analog-input 1, present-value, and the token after it.
+55 ff 05 06 05 00 0d 55 01 04 00 05 01 0c 0c 00 00 00 01 19 55 f3 89 => data-expecting-reply to 6 from 5 data 01040005010c0c000000011955
+55 ff 07 05 06 00 00 93 => reply-postponed to 5 from 6
+55 ff 06 ff 05 00 08 e3 01 20 ff ff 00 ff 10 08 15 b6 => data-not-expecting-reply to 255 from 5 data 0120ffff00ff1008
+55 ff 03 06 05 00 02 41 7a 7a 2e de => test-request to 6 from 5 data 7a7a
+55 ff 04 05 06 00 02 e5 7a 7a 2e de => test-response to 5 from 6 data 7a7a
+# Annex T: an extended frame, COBS-encoded and masked with 55 so no octet is
+# zero, with a CRC-32K; its length field is two short so old stations skip it.
+55 ff 21 06 05 00 0a 47 57 54 54 57 45 57 5d 50 3e dd 87 60 => extended-not-expecting-reply to 6 from 5 data 010000100008
+55 ff 20 06 05 00 0f c2 59 54 57 56 51 50 53 52 5d 5c 5f 5e 50 72 ee b1 e8 => extended-expecting-reply to 6 from 5 data 0102030405060708090a0b

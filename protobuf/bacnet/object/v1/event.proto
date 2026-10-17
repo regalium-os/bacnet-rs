@@ -1,0 +1,104 @@
+// Copyright 2026 RegaliumOS™.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package bacnet.object.v1;
+
+import "bacnet/object/v1/datetime.proto";
+import "bacnet/object/v1/value.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "EventProto";
+option java_package = "dev.regalium.bacnet.object.v1";
+
+// An Event is an alarm or event a device reported about one of its objects:
+// a confirmed or unconfirmed event notification (Clause 13.8, 13.9), sent to
+// this service as a recipient of the object's notification class.
+//
+// Events are numbered by this service as they arrive; the device's own
+// timestamp says when it happened by the device's clock, which may be a
+// time of day, a count, or a date and time.
+message Event {
+  option (google.api.resource) = {
+    type: "bacnet.regalium.dev/Event"
+    pattern: "devices/{device}/objects/{object}/events/{event}"
+    singular: "event"
+    plural: "events"
+  };
+
+  // The event name.
+  // Format: devices/{device}/objects/{object}/events/{event}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // The algorithm that raised it, as the standard spells BACnetEventType:
+  // `out-of-range`, `change-of-state`, or `type-N` for one this build
+  // cannot name.
+  string event_type = 2 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).string.pattern = "^[a-z][a-z0-9-]*$"
+  ];
+
+  // `alarm`, `event`, or `ack-notification`: an acknowledgement of an
+  // earlier alarm, reported to every recipient.
+  string notify_type = 3 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).string.pattern = "^[a-z][a-z0-9-]*$"
+  ];
+
+  // The event state the object left: `normal`, `fault`, `offnormal`,
+  // `high-limit`, `low-limit`, `life-safety-alarm`. Empty for an
+  // acknowledgement notification, which carries none.
+  string previous_event_state = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The event state the object entered.
+  string event_state = 5 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).string.pattern = "^[a-z][a-z0-9-]*$"
+  ];
+
+  // The notification class, which says who is told.
+  int32 notification_class = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // 0, the most urgent, to 255.
+  int32 priority = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The device's text for it, when it sent one.
+  string message = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Whether an operator must acknowledge it.
+  bool ack_required = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // When it happened, by the device: one of three forms (BACnetTimeStamp).
+  // Not a google.protobuf.Timestamp: a device's clock reading may be a bare
+  // time of day, any field of it unspecified, or no time at all.
+  oneof device_stamp {
+    // A time of day.
+    Time clock = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+    // A sequence number, from a device without a clock.
+    int64 sequence_number = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+    // A date and a time of day.
+    DeviceDateTime clock_and_calendar = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // The algorithm's values (BACnetNotificationParameters), with the octets
+  // the device sent: the limit exceeded, the value that exceeded it.
+  Value values = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // When this service received it.
+  google.protobuf.Timestamp receive_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// A date and a time, as a device's clock reads them, each field possibly
+// unspecified.
+message DeviceDateTime {
+  // The date.
+  Date calendar = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The time of day.
+  Time clock = 2 [(google.api.field_behavior) = REQUIRED];
+}

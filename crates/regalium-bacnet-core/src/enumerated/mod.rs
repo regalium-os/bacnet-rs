@@ -15,9 +15,11 @@
 //! every `parse_*` reads that spelling back, so a name is never lossy.
 //!
 //! The tables are partial where the standard is large: every object type
-//! through `lift`, and the properties and error codes a client meets.
+//! through `lift`, the properties and error codes a client meets, and the
+//! event types, states and notify types an alarm is described in.
 
 mod errors;
+mod events;
 mod object_types;
 mod properties;
 
@@ -69,6 +71,31 @@ pub fn error_code(number: u32) -> Option<&'static str> {
     let codes = errors::CODES;
     let i = codes.binary_search_by_key(&number, |(n, _)| *n).ok()?;
     codes.get(i).map(|(_, name)| *name)
+}
+
+/// An event type's name (`BACnetEventType`), or `None` for one this build
+/// cannot name.
+#[must_use]
+pub fn event_type(number: u32) -> Option<&'static str> {
+    let types = events::EVENT_TYPES;
+    let i = types.binary_search_by_key(&number, |(n, _)| *n).ok()?;
+    types.get(i).map(|(_, name)| *name)
+}
+
+/// An event state's name (`BACnetEventState`).
+#[must_use]
+pub fn event_state(number: u32) -> Option<&'static str> {
+    events::EVENT_STATES
+        .get(usize::try_from(number).ok()?)
+        .copied()
+}
+
+/// A notify type's name (`BACnetNotifyType`).
+#[must_use]
+pub fn notify_type(number: u32) -> Option<&'static str> {
+    events::NOTIFY_TYPES
+        .get(usize::try_from(number).ok()?)
+        .copied()
 }
 
 /// `BACnetSegmentation` (§21), from an I-Am or the Device object's

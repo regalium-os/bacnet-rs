@@ -25,3 +25,20 @@
 //!
 //! `bacnet.mstp.{send,receive}`, `bacnet.mstp.token.{pass,recover}`,
 //! `bacnet.mstp.frame.decode`.
+//!
+//! # State
+//!
+//! The [`crc`]s and COBS, and the [`frame`] codec, checked against the
+//! standard's residues; the [`reader`] that finds frames in a noisy stream;
+//! the [`master`] node state machine as table tests on a fake clock; and
+//! [`Mstp`], the link over a [`Line`] — a serial port, or a test bus.
+//! An NPDU over 501 octets goes out as an Annex T extended frame. Slave
+//! nodes, and a bus analyser's promiscuous mode, are not built yet.
+
+pub mod crc;
+pub mod frame;
+mod link;
+pub mod master;
+pub mod reader;
+
+pub use link::{Line, Mstp};

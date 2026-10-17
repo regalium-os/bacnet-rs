@@ -13,6 +13,7 @@
 using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("bacnet::object::v1");
 
+using Event = import "/bacnet/object/v1/event.capnp";
 using Subscription = import "/bacnet/object/v1/subscription.capnp";
 
 # Response message for SubscriptionService.StreamNotifications: whatever
@@ -23,4 +24,7 @@ struct StreamNotificationsResponse @0xe1bda396c0089e92 {
   # Notifications discarded since the previous response because the reader
   # fell behind. Non-zero means a value was missed, not merely delayed.
   droppedCount @1 :Int64;
+  # Alarms and events devices reported, oldest first: the event
+  # notifications that arrive on the same stream as changes of value.
+  events @2 :List(Event.Event);
 }

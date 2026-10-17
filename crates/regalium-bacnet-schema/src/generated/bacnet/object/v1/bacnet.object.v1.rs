@@ -252,6 +252,98 @@ impl ::prost::Name for ConstructedElement {
 const NAME: &'static str = "ConstructedElement";
 const PACKAGE: &'static str = "bacnet.object.v1";
 fn full_name() -> ::prost::alloc::string::String { "bacnet.object.v1.ConstructedElement".into() }fn type_url() -> ::prost::alloc::string::String { "/bacnet.object.v1.ConstructedElement".into() }}
+/// An Event is an alarm or event a device reported about one of its objects:
+/// a confirmed or unconfirmed event notification (Clause 13.8, 13.9), sent to
+/// this service as a recipient of the object's notification class.
+///
+/// Events are numbered by this service as they arrive; the device's own
+/// timestamp says when it happened by the device's clock, which may be a
+/// time of day, a count, or a date and time.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Event {
+    /// The event name.
+    /// Format: devices/{device}/objects/{object}/events/{event}
+    #[prost(string, tag="1")]
+    pub name: ::prost::alloc::string::String,
+    /// The algorithm that raised it, as the standard spells BACnetEventType:
+    /// `out-of-range`, `change-of-state`, or `type-N` for one this build
+    /// cannot name.
+    #[prost(string, tag="2")]
+    pub event_type: ::prost::alloc::string::String,
+    /// `alarm`, `event`, or `ack-notification`: an acknowledgement of an
+    /// earlier alarm, reported to every recipient.
+    #[prost(string, tag="3")]
+    pub notify_type: ::prost::alloc::string::String,
+    /// The event state the object left: `normal`, `fault`, `offnormal`,
+    /// `high-limit`, `low-limit`, `life-safety-alarm`. Empty for an
+    /// acknowledgement notification, which carries none.
+    #[prost(string, tag="4")]
+    pub previous_event_state: ::prost::alloc::string::String,
+    /// The event state the object entered.
+    #[prost(string, tag="5")]
+    pub event_state: ::prost::alloc::string::String,
+    /// The notification class, which says who is told.
+    #[prost(int32, tag="6")]
+    pub notification_class: i32,
+    /// 0, the most urgent, to 255.
+    #[prost(int32, tag="7")]
+    pub priority: i32,
+    /// The device's text for it, when it sent one.
+    #[prost(string, tag="8")]
+    pub message: ::prost::alloc::string::String,
+    /// Whether an operator must acknowledge it.
+    #[prost(bool, tag="9")]
+    pub ack_required: bool,
+    /// The algorithm's values (BACnetNotificationParameters), with the octets
+    /// the device sent: the limit exceeded, the value that exceeded it.
+    #[prost(message, optional, tag="13")]
+    pub values: ::core::option::Option<Value>,
+    /// When this service received it.
+    #[prost(message, optional, tag="14")]
+    pub receive_time: ::core::option::Option<::prost_types::Timestamp>,
+    /// When it happened, by the device: one of three forms (BACnetTimeStamp).
+    /// Not a google.protobuf.Timestamp: a device's clock reading may be a bare
+    /// time of day, any field of it unspecified, or no time at all.
+    #[prost(oneof="event::DeviceStamp", tags="10, 11, 12")]
+    pub device_stamp: ::core::option::Option<event::DeviceStamp>,
+}
+/// Nested message and enum types in `Event`.
+pub mod event {
+    /// When it happened, by the device: one of three forms (BACnetTimeStamp).
+    /// Not a google.protobuf.Timestamp: a device's clock reading may be a bare
+    /// time of day, any field of it unspecified, or no time at all.
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum DeviceStamp {
+        /// A time of day.
+        #[prost(message, tag="10")]
+        Clock(super::Time),
+        /// A sequence number, from a device without a clock.
+        #[prost(int64, tag="11")]
+        SequenceNumber(i64),
+        /// A date and a time of day.
+        #[prost(message, tag="12")]
+        ClockAndCalendar(super::DeviceDateTime),
+    }
+}
+impl ::prost::Name for Event {
+const NAME: &'static str = "Event";
+const PACKAGE: &'static str = "bacnet.object.v1";
+fn full_name() -> ::prost::alloc::string::String { "bacnet.object.v1.Event".into() }fn type_url() -> ::prost::alloc::string::String { "/bacnet.object.v1.Event".into() }}
+/// A date and a time, as a device's clock reads them, each field possibly
+/// unspecified.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeviceDateTime {
+    /// The date.
+    #[prost(message, optional, tag="1")]
+    pub calendar: ::core::option::Option<Date>,
+    /// The time of day.
+    #[prost(message, optional, tag="2")]
+    pub clock: ::core::option::Option<Time>,
+}
+impl ::prost::Name for DeviceDateTime {
+const NAME: &'static str = "DeviceDateTime";
+const PACKAGE: &'static str = "bacnet.object.v1";
+fn full_name() -> ::prost::alloc::string::String { "bacnet.object.v1.DeviceDateTime".into() }fn type_url() -> ::prost::alloc::string::String { "/bacnet.object.v1.DeviceDateTime".into() }}
 /// An Object is one BACnet object in a device's database: an analog input, a
 /// binary output, a schedule, a lift. ASHRAE 135 Clause 12 defines the types;
 /// a device's object-list property names the ones it has.
@@ -807,6 +899,10 @@ pub struct StreamNotificationsResponse {
     /// fell behind. Non-zero means a value was missed, not merely delayed.
     #[prost(int64, tag="2")]
     pub dropped_count: i64,
+    /// Alarms and events devices reported, oldest first: the event
+    /// notifications that arrive on the same stream as changes of value.
+    #[prost(message, repeated, tag="3")]
+    pub events: ::prost::alloc::vec::Vec<Event>,
 }
 impl ::prost::Name for StreamNotificationsResponse {
 const NAME: &'static str = "StreamNotificationsResponse";

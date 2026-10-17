@@ -20,3 +20,16 @@
 //! # Spans
 //!
 //! `bacnet.ipv6.{send,receive}`, `bacnet.ipv6.vmac.resolve`.
+//!
+//! # State
+//!
+//! The [`bvll`] codec, with its corpus under `fixtures/bvll6/`, laid out as
+//! Wireshark's dissector reads real captures; the [`vmac_table`] on an
+//! injected clock; and [`BacnetIpv6`], the link that drives it. BBMD and
+//! foreign-device support follow, as BACnet/IP's did.
+
+pub mod bvll;
+mod link;
+pub mod vmac_table;
+
+pub use link::{BacnetIpv6, LINK_LOCAL, SITE_LOCAL};

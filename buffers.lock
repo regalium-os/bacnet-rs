@@ -55,6 +55,58 @@ messages:
       - number: 4
         ordinal: 3
         name: day_of_week
+  - message: bacnet.object.v1.DeviceDateTime
+    fields:
+      - number: 1
+        ordinal: 0
+        name: calendar
+      - number: 2
+        ordinal: 1
+        name: clock
+  - message: bacnet.object.v1.Event
+    fields:
+      - number: 1
+        ordinal: 0
+        name: name
+      - number: 2
+        ordinal: 1
+        name: event_type
+      - number: 3
+        ordinal: 2
+        name: notify_type
+      - number: 4
+        ordinal: 3
+        name: previous_event_state
+      - number: 5
+        ordinal: 4
+        name: event_state
+      - number: 6
+        ordinal: 5
+        name: notification_class
+      - number: 7
+        ordinal: 6
+        name: priority
+      - number: 8
+        ordinal: 7
+        name: message
+      - number: 9
+        ordinal: 8
+        name: ack_required
+      - number: 10
+        ordinal: 9
+        name: clock
+      - number: 11
+        ordinal: 10
+        name: sequence_number
+      - number: 12
+        ordinal: 11
+        name: clock_and_calendar
+      - number: 13
+        ordinal: 12
+        name: values
+      - number: 14
+        ordinal: 13
+        name: receive_time
   - message: bacnet.object.v1.Notification
     fields:
       - number: 1
@@ -107,6 +159,9 @@ messages:
       - number: 2
         ordinal: 1
         name: dropped_count
+      - number: 3
+        ordinal: 2
+        name: events
   - message: bacnet.object.v1.Time
     fields:
       - number: 1

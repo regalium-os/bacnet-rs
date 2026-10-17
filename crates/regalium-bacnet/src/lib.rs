@@ -55,6 +55,12 @@ pub use regalium_bacnet_core::datalink;
 /// UDP link.
 pub use regalium_bacnet_ip as ip;
 
+/// BACnet/IPv6 (Annex U): BVLL-IPv6, the virtual MAC table, and the link.
+pub use regalium_bacnet_ipv6 as ipv6;
+
+/// MS/TP (Clause 9): the frame codec, the master node, and the link.
+pub use regalium_bacnet_mstp as mstp;
+
 /// The client: discovery, binding and reads over any datalink.
 pub use regalium_bacnet_runtime as runtime;
 
@@ -64,6 +70,9 @@ pub use regalium_bacnet_runtime::{Client, Server};
 
 /// The object model a local device serves from.
 pub use regalium_bacnet_core::obj;
+
+/// A local device's answers, and the responder that segments large ones.
+pub use regalium_bacnet_core::server;
 
 /// The one decode error every layer of the core returns.
 pub use regalium_bacnet_core::{Error, ErrorKind};
