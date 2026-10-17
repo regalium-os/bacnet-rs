@@ -10,7 +10,7 @@ use std::borrow::Cow;
 
 /// A character string (§20.2.9): a character-set octet and the encoded
 /// text. Borrows the input; [`CharacterString::text`] decodes it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CharacterString<'a> {
     /// 0 UTF-8 (ANSI X3.4), 1 DBCS, 2 JIS X 0208, 3 UCS-4, 4 UCS-2,
     /// 5 ISO 8859-1.
@@ -45,7 +45,7 @@ impl CharacterString<'_> {
 
 /// A bit string (§20.2.10): how many bits of the last octet are unused,
 /// then the octets, most significant bit first. Borrows the input.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct BitString<'a> {
     /// Unused bits at the end of the last octet, 0 to 7.
     pub unused: u8,
@@ -78,7 +78,7 @@ impl BitString<'_> {
 }
 
 /// A date (§20.2.12), as its four octets. 255 in any field is "unspecified".
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Date {
     /// Year minus 1900.
     pub year: u8,
@@ -106,7 +106,7 @@ impl Date {
 }
 
 /// A time of day (§20.2.13), as its four octets. 255 is "unspecified".
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Time {
     /// 0 to 23.
     pub hour: u8,
@@ -129,7 +129,7 @@ impl Time {
 
 /// An object identifier (§20.2.14): a 10-bit type and a 22-bit instance in
 /// one four-octet field.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ObjectIdentifier {
     /// `BACnetObjectType`; 128 and above are proprietary.
     pub object_type: u16,

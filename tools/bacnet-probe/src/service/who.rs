@@ -3,9 +3,14 @@
 
 //! Discovery (§16.9, §16.10): Who-Is / I-Am finds devices, Who-Has / I-Have
 //! finds an object when you know its name but not which device holds it.
+//!
+//! The grammars are the driver's; these are the probe's shapes for them.
 
-use super::Reader;
-use crate::tag::{self, ObjectId, Value};
+use super::bridge::{id, object};
+use crate::tag::ObjectId;
+use regalium_bacnet::enumerated::Segmentation;
+use regalium_bacnet::primitive::CharacterString;
+use regalium_bacnet::service::{self as core, Sought, WhoHas, WhoIs};
 
 /// I-Am: who a device is and what it can take.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -40,123 +45,101 @@ pub struct IHave {
     pub name: String,
 }
 
-fn range(out: &mut Vec<u8>, range: Option<(u32, u32)>) {
-    if let Some((low, high)) = range {
-        tag::push_unsigned(out, 0, true, low.into());
-        tag::push_unsigned(out, 1, true, high.into());
+fn utf8(text: &str) -> CharacterString<'_> {
+    CharacterString {
+        charset: 0,
+        bytes: text.as_bytes(),
     }
-}
-
-#[allow(clippy::option_option)] // Outer: malformed; inner: no limits given.
-fn decode_range(r: &mut Reader<'_>) -> Option<Option<(u32, u32)>> {
-    let low = r.optional_unsigned(0)?;
-    let high = r.optional_unsigned(1)?;
-    Some(match (low, high) {
-        (Some(l), Some(h)) => Some((u32::try_from(l).ok()?, u32::try_from(h).ok()?)),
-        _ => None,
-    })
 }
 
 /// A Who-Is body, optionally limited to device instances `low..=high`.
 #[must_use]
 pub fn who_is(limits: Option<(u32, u32)>) -> Vec<u8> {
     let mut out = Vec::new();
-    range(&mut out, limits);
+    WhoIs { range: limits }.encode(&mut out);
     out
 }
 
-/// The limits of a Who-Is body, borrowing it; `Some(None)` is "everyone".
+/// The limits of a Who-Is body; `Some(None)` is "everyone". A low limit
+/// without a high one is malformed (§16.10.1.1), and `None`.
 #[must_use]
 pub fn decode_who_is(body: &[u8]) -> Option<Option<(u32, u32)>> {
-    decode_range(&mut Reader::new(body))
+    WhoIs::decode(body).ok().map(|w| w.range)
 }
 
 /// An I-Am body: all four parameters are application-tagged.
 #[must_use]
 pub fn i_am(me: &IAm) -> Vec<u8> {
     let mut out = Vec::new();
-    for v in [
-        Value::Object(me.device),
-        Value::Unsigned(me.max_apdu),
-        Value::Enumerated(me.segmentation),
-        Value::Unsigned(me.vendor),
-    ] {
-        tag::push_value(&mut out, &v);
+    core::IAm {
+        device: id(me.device),
+        max_apdu: u32::try_from(me.max_apdu).unwrap_or(u32::MAX),
+        segmentation: Segmentation::from_u32(me.segmentation),
+        vendor_id: u32::try_from(me.vendor).unwrap_or(u32::MAX),
     }
+    .encode(&mut out);
     out
 }
 
-/// Decodes an I-Am body, borrowing it.
+/// Decodes an I-Am body; `None` unless it names a Device object.
 #[must_use]
 pub fn decode_i_am(body: &[u8]) -> Option<IAm> {
-    let mut r = Reader::new(body);
-    let (Value::Object(device), Value::Unsigned(max_apdu)) = (r.app()?, r.app()?) else {
-        return None;
-    };
-    let (Value::Enumerated(segmentation), Value::Unsigned(vendor)) = (r.app()?, r.app()?) else {
-        return None;
-    };
-    (device.kind == 8).then_some(IAm {
-        device,
-        max_apdu,
-        segmentation,
-        vendor,
+    let i = core::IAm::decode(body).ok()?;
+    (i.device.object_type == 8).then(|| IAm {
+        device: object(i.device),
+        max_apdu: i.max_apdu.into(),
+        segmentation: i.segmentation.to_u32(),
+        vendor: i.vendor_id.into(),
     })
 }
 
 /// A Who-Has body.
 #[must_use]
 pub fn who_has(limits: Option<(u32, u32)>, wanted: &Wanted) -> Vec<u8> {
+    let object = match wanted {
+        Wanted::Object(o) => Sought::Identifier(id(*o)),
+        Wanted::Name(name) => Sought::Name(utf8(name)),
+    };
     let mut out = Vec::new();
-    range(&mut out, limits);
-    match wanted {
-        Wanted::Object(id) => tag::push_object(&mut out, 2, true, *id),
-        Wanted::Name(name) => {
-            tag::push_header(&mut out, 3, true, name.len() + 1);
-            out.push(0); // Character set: ANSI X3.4 / UTF-8.
-            out.extend(name.as_bytes());
-        }
+    WhoHas {
+        range: limits,
+        object,
     }
+    .encode(&mut out);
     out
 }
 
-/// Decodes a Who-Has body, borrowing it.
+/// Decodes a Who-Has body.
 #[must_use]
 pub fn decode_who_has(body: &[u8]) -> Option<(Option<(u32, u32)>, Wanted)> {
-    let mut r = Reader::new(body);
-    let limits = decode_range(&mut r)?;
-    let wanted = if r.at_context(2) {
-        Wanted::Object(r.object(2)?)
-    } else {
-        Wanted::Name(r.text(3)?)
+    let w = WhoHas::decode(body).ok()?;
+    let wanted = match w.object {
+        Sought::Identifier(o) => Wanted::Object(object(o)),
+        Sought::Name(n) => Wanted::Name(n.text()?.into_owned()),
     };
-    Some((limits, wanted))
+    Some((w.range, wanted))
 }
 
 /// An I-Have body.
 #[must_use]
 pub fn i_have(have: &IHave) -> Vec<u8> {
     let mut out = Vec::new();
-    for v in [
-        Value::Object(have.device),
-        Value::Object(have.object),
-        Value::Text(have.name.clone()),
-    ] {
-        tag::push_value(&mut out, &v);
+    core::IHave {
+        device: id(have.device),
+        object: id(have.object),
+        name: utf8(&have.name),
     }
+    .encode(&mut out);
     out
 }
 
-/// Decodes an I-Have body, borrowing it.
+/// Decodes an I-Have body.
 #[must_use]
 pub fn decode_i_have(body: &[u8]) -> Option<IHave> {
-    let mut r = Reader::new(body);
-    match (r.app()?, r.app()?, r.app()?) {
-        (Value::Object(device), Value::Object(object), Value::Text(name)) => Some(IHave {
-            device,
-            object,
-            name,
-        }),
-        _ => None,
-    }
+    let i = core::IHave::decode(body).ok()?;
+    Some(IHave {
+        device: object(i.device),
+        object: object(i.object),
+        name: i.name.text()?.into_owned(),
+    })
 }

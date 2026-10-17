@@ -8,12 +8,12 @@ It is a library and a runtime, not an application: no global state, no hidden
 threads, and no clock the core reads behind your back. It is built to be
 imported by software that must keep talking to lift controllers for years.
 
-> **Status.** Phase 8 is complete: **the first live read**. The driver
-> discovers devices, routed ones included, and reads them over BACnet/IP —
-> codecs, transaction state machine, datalink and client, each against a
-> committed corpus — into the protobuf model. The **field probe** now frames
-> and transacts through the driver. COV, the poll scheduler and the other
-> services are next.
+> **Status.** Past Phase 8. The driver discovers devices, routed ones
+> included, and reads, writes and watches them over BACnet/IP: `ReadProperty`,
+> `ReadPropertyMultiple` with fallback, `WriteProperty`, and COV renewed
+> before it lapses with polling where it is refused — each service against a
+> committed corpus, each value into the protobuf model. The **field probe**
+> frames, transacts and speaks every service through the driver.
 
 ## Features
 
@@ -21,7 +21,7 @@ imported by software that must keep talking to lift controllers for years.
 | --- | --- | --- |
 | Core | tags, the 13 primitive types, APDU, NPDU, the client transaction state machine, Who-Is / I-Am / `ReadProperty` (**built**); the other services, object model — sans-io, lossless | Phases 3–6 |
 | BACnet/IP | Annex J: BVLL, BBMD, foreign device registration, the UDP link (**built**) | Phase 7 |
-| Runtime | discovery, binding through routers, reads, offline as an event (**built**); polling, COV lifecycle, reconnection | Phase 8 |
+| Runtime | discovery, binding through routers, reads, writes, RPM fallback, COV lifecycle, polling, alarms, rebinding with backoff, a served local device with segmentation (**built**) | Phase 8 |
 | Schema | `protobuf/` per Google AIP; prost, FlatBuffers and Cap'n Proto; conversion from the decoded services (**built**) | Phase 9 |
 | MS/TP | Clause 9 master node over RS-485 | planned |
 | BACnet/SC | Annex AB, WebSocket and TLS, hub and direct | planned |
@@ -174,7 +174,8 @@ carries a small codec of its own until Phase 8, then moves onto the driver.
 
 | | |
 | --- | --- |
-| [docs/usage.md](docs/usage.md) | the API the library is built to |
+| [docs/usage.md](docs/usage.md) | the client and the local device: what runs, and what is planned |
+| [docs/core.md](docs/core.md) | driving the sans-io core yourself, and choosing a datalink |
 | [docs/roadmap.md](docs/roadmap.md) | every crate's features, built and planned, and the phase order |
 | [docs/ipv6.md](docs/ipv6.md) | BACnet/IPv6: what Annex U requires and when it is done |
 | [tools/bacnet-probe](tools/bacnet-probe/README.md) | the probe: commands, TUI, settings, metrics |

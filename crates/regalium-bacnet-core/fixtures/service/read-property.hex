@@ -31,7 +31,7 @@
 50 0a 0c 91 02 91 20 => error read-property: property: unknown-property
 50 0b 0c 91 01 91 1f => error read-property: object: unknown-object
 50 0c 0c 91 09 91 63 => error read-property: class-9: code-99
-# PDUs that carry no service this phase reads.
-50 0d 0f 91 02 91 28 => undecoded
+# A WriteProperty error decodes as one; what carries no service does not.
+50 0d 0f 91 02 91 28 => error write-property: property: write-access-denied
 20 0e 0f => undecoded
 3c 0f 00 04 0c 0c 00 00 00 01 => undecoded

@@ -3,7 +3,7 @@
 
 //! A value read, owned, and its place in the protobuf model.
 
-use crate::error::ReadError;
+use crate::error::RequestError;
 use regalium_bacnet_core::primitive::Primitive;
 use regalium_bacnet_core::service::{ReadProperty, ReadPropertyAck};
 use regalium_bacnet_schema::convert;
@@ -35,11 +35,11 @@ impl Reading {
     ///
     /// # Errors
     ///
-    /// [`ReadError::Malformed`], carrying the octets, when the value is not
+    /// [`RequestError::Malformed`], carrying the octets, when the value is not
     /// well-formed elements. Owned, so it outlives the reading.
-    pub fn property(&self) -> Result<Property, ReadError> {
+    pub fn property(&self) -> Result<Property, RequestError> {
         convert::property(self.device, &self.ack())
-            .map_err(|_| ReadError::Malformed(self.value.clone()))
+            .map_err(|_| RequestError::Malformed(self.value.clone()))
     }
 
     fn ack(&self) -> ReadPropertyAck<'_> {

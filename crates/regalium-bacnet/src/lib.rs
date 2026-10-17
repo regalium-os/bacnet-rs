@@ -58,8 +58,12 @@ pub use regalium_bacnet_ip as ip;
 /// The client: discovery, binding and reads over any datalink.
 pub use regalium_bacnet_runtime as runtime;
 
-/// The client, at the top level where most callers want it.
-pub use regalium_bacnet_runtime::Client;
+/// The client and the local device, at the top level where most callers
+/// want them.
+pub use regalium_bacnet_runtime::{Client, Server};
+
+/// The object model a local device serves from.
+pub use regalium_bacnet_core::obj;
 
 /// The one decode error every layer of the core returns.
 pub use regalium_bacnet_core::{Error, ErrorKind};

@@ -4,7 +4,8 @@
 //! The error a service returns in an Error PDU (§18, §21 `Error`): a class
 //! and a code, for `ReadProperty` and every service whose error is plain.
 
-use super::fields::{Fields, enumerated};
+use super::fields::Fields;
+use super::values::enumerated;
 use crate::enumerated::{error_class, error_code};
 use crate::error::Error;
 use crate::primitive::Primitive;

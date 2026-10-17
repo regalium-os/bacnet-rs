@@ -1,0 +1,16 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# CreateObject and DeleteObject (§15.3, §15.4).
+
+# An analog-value of the device's choosing, named "Fan"; then one at 7.
+00 05 01 0a 0e 09 02 0f 1e 09 4d 2e 75 04 00 46 61 6e 2f 1f => create-object type analog-value with object-name = string "Fan"
+00 05 02 0a 0e 1c 00 80 00 07 0f => create-object analog-value:7
+30 02 0a c4 00 80 00 07 => create-object-ack analog-value:7
+00 05 03 0b c4 00 80 00 07 => delete-object analog-value:7
+# Refused at the first initial value: unsupported-object-type (36); and a
+# delete refused: object-deletion-not-permitted (23).
+50 01 0a 0e 91 01 91 24 0f 19 01 => create-object-error object: unsupported-object-type at 1
+50 03 0b 91 01 91 17 => error delete-object: object: object-deletion-not-permitted
+# A specifier with neither a type nor an identifier.
+00 05 04 0a 0e 0f => error missing-field 1

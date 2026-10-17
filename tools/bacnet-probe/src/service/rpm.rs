@@ -7,10 +7,16 @@
 //! controller in seconds and in minutes.
 //!
 //! Each property succeeds or fails on its own: the ACK carries a value or an
-//! error per property, so one unknown property does not lose the rest.
+//! error per property, so one unknown property does not lose the rest. The
+//! grammar is the driver's; the values are the probe's.
 
-use super::{PropertyRef, PropertyResult, Reader};
-use crate::tag::{self, ObjectId, Value};
+use super::bridge::{id, object, octets, property, reference, values};
+use super::{PropertyRef, PropertyResult};
+use crate::tag::ObjectId;
+use regalium_bacnet::service::{
+    self as core, ReadAccess, ReadPropertyMultiple, ReadPropertyMultipleAck, ReadResult,
+    ServiceError,
+};
 
 /// One object and the properties wanted from it (`ReadAccessSpecification`).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,104 +37,97 @@ pub struct Results {
 }
 
 /// A `ReadPropertyMultiple` request body.
+/// A `ReadPropertyMultiple` request body.
 #[must_use]
 pub fn request(specs: &[Spec]) -> Vec<u8> {
+    let reads = specs
+        .iter()
+        .map(|s| ReadAccess {
+            object: id(s.object),
+            properties: s.properties.iter().map(|p| reference(*p)).collect(),
+        })
+        .collect();
     let mut out = Vec::new();
-    for spec in specs {
-        tag::push_object(&mut out, 0, true, spec.object);
-        tag::push_opening(&mut out, 1);
-        for p in &spec.properties {
-            tag::push_unsigned(&mut out, 0, true, p.property.into());
-            if let Some(i) = p.index {
-                tag::push_unsigned(&mut out, 1, true, i.into());
-            }
-        }
-        tag::push_closing(&mut out, 1);
-    }
+    ReadPropertyMultiple { reads }.encode(&mut out);
     out
 }
 
-/// Decodes a request body, borrowing it.
+/// Decodes a request body.
 #[must_use]
 pub fn decode_request(body: &[u8]) -> Option<Vec<Spec>> {
-    let mut r = Reader::new(body);
-    let mut specs = Vec::new();
-    while !r.is_empty() {
-        let object = r.object(0)?;
-        r.opening(1)?;
-        let mut properties = Vec::new();
-        while !r.at_closing(1) {
-            let property = u32::try_from(r.unsigned(0)?).ok()?;
-            let index = r.optional_unsigned(1)?.and_then(|i| u32::try_from(i).ok());
-            properties.push(PropertyRef { property, index });
-        }
-        r.closing(1)?;
-        specs.push(Spec { object, properties });
-    }
-    Some(specs)
+    let r = ReadPropertyMultiple::decode(body).ok()?;
+    Some(
+        r.reads
+            .iter()
+            .map(|a| Spec {
+                object: object(a.object),
+                properties: a.properties.iter().map(|p| property(*p)).collect(),
+            })
+            .collect(),
+    )
 }
 
 /// A ReadPropertyMultiple-ACK body.
 #[must_use]
 pub fn ack(results: &[Results]) -> Vec<u8> {
+    let encoded: Vec<Vec<Result<Vec<u8>, ServiceError>>> = results
+        .iter()
+        .map(|r| {
+            r.properties
+                .iter()
+                .map(|(_, v)| match v {
+                    Ok(values) => Ok(octets(values)),
+                    Err((class, code)) => Err(ServiceError {
+                        class: *class,
+                        code: *code,
+                    }),
+                })
+                .collect()
+        })
+        .collect();
+    let objects = results
+        .iter()
+        .zip(&encoded)
+        .map(|(r, values)| ReadResult {
+            object: id(r.object),
+            results: r
+                .properties
+                .iter()
+                .zip(values)
+                .map(|((p, _), v)| core::PropertyResult {
+                    property: reference(*p),
+                    result: v.as_ref().map(Vec::as_slice).map_err(|e| *e),
+                })
+                .collect(),
+        })
+        .collect();
     let mut out = Vec::new();
-    for result in results {
-        tag::push_object(&mut out, 0, true, result.object);
-        tag::push_opening(&mut out, 1);
-        for (p, value) in &result.properties {
-            tag::push_unsigned(&mut out, 2, true, p.property.into());
-            if let Some(i) = p.index {
-                tag::push_unsigned(&mut out, 3, true, i.into());
-            }
-            match value {
-                Ok(values) => {
-                    tag::push_opening(&mut out, 4);
-                    for v in values {
-                        tag::push_value(&mut out, v);
-                    }
-                    tag::push_closing(&mut out, 4);
-                }
-                Err((class, code)) => {
-                    tag::push_opening(&mut out, 5);
-                    tag::push_value(&mut out, &Value::Enumerated(*class));
-                    tag::push_value(&mut out, &Value::Enumerated(*code));
-                    tag::push_closing(&mut out, 5);
-                }
-            }
-        }
-        tag::push_closing(&mut out, 1);
-    }
+    ReadPropertyMultipleAck { objects }.encode(&mut out);
     out
 }
 
-/// Decodes an ACK body, borrowing it.
+/// Decodes an ACK body.
 #[must_use]
 pub fn decode_ack(body: &[u8]) -> Option<Vec<Results>> {
-    let mut r = Reader::new(body);
-    let mut results = Vec::new();
-    while !r.is_empty() {
-        let object = r.object(0)?;
-        r.opening(1)?;
-        let mut properties = Vec::new();
-        while !r.at_closing(1) {
-            let property = u32::try_from(r.unsigned(2)?).ok()?;
-            let index = r.optional_unsigned(3)?.and_then(|i| u32::try_from(i).ok());
-            let value = if r.at_opening(4) {
-                r.opening(4)?;
-                Ok(r.values_until(4)?)
-            } else {
-                r.opening(5)?;
-                let (Value::Enumerated(class), Value::Enumerated(code)) = (r.app()?, r.app()?)
-                else {
-                    return None;
-                };
-                r.closing(5)?;
-                Err((class, code))
-            };
-            properties.push((PropertyRef { property, index }, value));
-        }
-        r.closing(1)?;
-        results.push(Results { object, properties });
-    }
-    Some(results)
+    let ack = ReadPropertyMultipleAck::decode(body).ok()?;
+    ack.objects
+        .iter()
+        .map(|o| {
+            let properties = o
+                .results
+                .iter()
+                .map(|r| {
+                    let value: PropertyResult = match r.result {
+                        Ok(v) => Ok(values(v)?),
+                        Err(e) => Err((e.class, e.code)),
+                    };
+                    Some((property(r.property), value))
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Some(Results {
+                object: object(o.object),
+                properties,
+            })
+        })
+        .collect()
 }

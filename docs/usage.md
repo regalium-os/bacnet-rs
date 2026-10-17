@@ -53,7 +53,7 @@ let asks = [ReadRequest::new(599, ai1, 85), ReadRequest::new(10, ai1, 85)];
 for result in client.read_many(&asks)? {
     match result {
         Ok(r) => println!("{:?}", r.primitive()),
-        Err(ReadError::Offline(why)) => println!("no answer: {why}"),
+        Err(RequestError::Offline(why)) => println!("no answer: {why}"),
         Err(e) => println!("{e}"),
     }
 }
@@ -71,117 +71,81 @@ for event in client.events() {
 `cargo run -p regalium-bacnet --example read -- ADDRESS DEVICE OBJECT
 PROPERTY` does all of this against a real device.
 
-## Reading many in one request — planned
+## Reading many in one request — built
 
 `ReadPropertyMultiple` is one round trip rather than one per point, which is
-the difference between polling a thousand points a second and a minute:
+the difference between polling a thousand points a second and a minute. Each
+property comes back with its value or its own error:
 
 ```rust
-let readings = client
-    .read_property_multiple(device)
-    .object((ObjectType::AnalogInput, 1))
-        .properties([PropertyId::PresentValue, PropertyId::Units, PropertyId::StatusFlags])
-    .send()?;
+let reads = [ReadAccess { object: ai1, properties: vec![PropertyReference::new(85), PropertyReference::new(111)] }];
+for result in client.read_multiple(599, &reads)? {
+    println!("{:?}", result.map(|r| r.primitive()));
+}
 ```
 
 Not every device implements `ReadPropertyMultiple`, and the standard permits
 that. A device that rejects it is a capability to record once, not an error to
-retry — the runtime falls back to `ReadProperty` and remembers.
+retry: the client reads it property by property from then on, and remembers.
 
-## Subscribing — planned
-
-Polling a point that changes twice a day is waste. Change-of-value pushes
-instead, and the lifetime a subscription carries is renewed for you before it
-lapses:
+## Writing — built
 
 ```rust
-let mut changes = client
-    .subscribe_cov(device, (ObjectType::AnalogInput, 1))
-    .lifetime(Duration::from_secs(300))
-    .confirmed(true)
-    .await?;
-
-while let Some(change) = changes.next().await {
-    println!("{} = {}", change.property(), change.value());
-}
+client.write_property(599, ao1, 85, &Primitive::Real(42.5), Some(8))?;
 ```
 
-`confirmed(true)` asks the device to expect an acknowledgement for each
-notification, so a dropped datagram is detectable. It requires a local device
-to acknowledge from, which the client will create.
+A write at a priority can be acknowledged and change nothing, when a higher
+priority holds the value (§19.2); the priority array says which slot wins.
 
-`subscribe_cov_property` narrows a subscription to one property and can set an
-increment, so a noisy analogue reports on real movement rather than on its own
-last digit.
+## Watching — built
 
-## Serving — planned
-
-A local device answers `Who-Is`, owns an object database, and can be the
-recipient of event and alarm notifications:
+Polling a point that changes twice a day is waste. A watch subscribes for
+change of value where the device allows it — renewing the subscription before
+it lapses, acknowledging confirmed notifications — and polls where it refuses,
+so every point arrives through one stream:
 
 ```rust
-let device = LocalDevice::new(599)
-    .name("plant-gateway")
-    .object(AnalogValue::new(1).present_value(21.5).units(Units::DegreesCelsius))
-    .object(BinaryValue::new(1).present_value(false))
-    .serve(BacnetIp::bind("0.0.0.0:47808").await?)
-    .await?;
-```
-
-## Driving the core directly — built
-
-The runtime is optional. The core is sans-io: hand it octets and a timestamp
-and it returns what should happen next, which is what makes a timeout, retry
-and abandon sequence a table test rather than a hardware appointment.
-
-```rust
-use regalium_bacnet_core::tsm::{Config, Request, Step, Tsm};
-
-let mut tsm = Tsm::new(Config::default());
-let request = Request::new(READ_PROPERTY, body).remote(peer_limits);
-let invoke = tsm.request(peer, request, clock.now())?;
-
+let id = client.watch(Watch::new(599, ai1).every(Duration::from_secs(10)))?;
 loop {
-    match tsm.poll(clock.now()) {
-        Step::Transmit { peer, apdu, .. } => port.send(peer, &apdu)?,
-        Step::Complete { reply, .. } => break Ok(reply),
-        Step::Abandon { reason, .. } => break Err(reason),
-        Step::Idle { wake_at } => match port.recv_until(wake_at)? {
-            Some((from, octets)) => {
-                tsm.receive(from, &Apdu::decode(&octets)?, clock.now());
-            }
-            None => {} // the deadline passed; the next poll retries
-        },
+    client.listen(Duration::from_secs(1))?;
+    for update in client.updates() {
+        println!("{} via {:?}: {:?}", update.watch, update.source, update.values);
     }
 }
 ```
 
-Decoding is lossless, so a malformed frame can be inspected rather than
-silently normalised:
+`Watch::cov(None)` polls only. `unwatch` cancels the subscription.
+`SubscribeCOVProperty`, with its increment, is in the core and the model, and
+reaches the client with the next round of the runtime.
+
+## Serving — built
+
+A local device answers Who-Is and Who-Has, and serves reads and writes from
+a database — `Memory`, or anything implementing `obj::Database`, so points
+living in a PLC or another protocol are served the same way:
 
 ```rust
-let npdu = Npdu::decode(&bvlc.payload)?;
-if let Body::Apdu(octets) = npdu.body {
-    let apdu = Apdu::decode(octets)?;
-    let mut again = Vec::new();
-    apdu.encode(&mut again);
-    assert_eq!(again, octets);
+let db = Memory::new(599, "plant-gateway", 260)
+    .object(av1, "Setpoint")
+    .with(av1, 85, &Primitive::Real(21.5))
+    .writable(av1, 85)
+    .object(ao1, "Fan speed")
+    .commandable(ao1, &Primitive::Real(0.0));  // sixteen priority slots
+let mut device = Server::new(BacnetIp::bind("0.0.0.0:47808".parse()?)?, db);
+device.announce()?;
+loop {
+    device.serve(Duration::from_secs(1))?;
+    device.database_mut().set(ai1, 85, &Primitive::Real(read_sensor()));
 }
 ```
 
-## Datalinks
+It does not segment yet: an answer too large for the requester is aborted
+as segmentation-not-supported, which §5.4.5 allows a device that does not.
+Event notifications to the client arrive through `client.alarms()`,
+acknowledged when confirmed.
 
-`Client::new` takes any datalink; BACnet/IP is built. The others are
-constructed the same way when they land:
+## Underneath
 
-```rust
-let client = Client::new(MsTp::open("/dev/ttyUSB0", Baud::B38400, MacAddress(3))?, Config::default());
-```
-
-BACnet/IPv6 is constructed the same way, with an interface to join the
-multicast group on and a virtual MAC address; what Annex U asks of it that
-Annex J does not is in [ipv6.md](ipv6.md).
-
-A datalink is a trait the core declares — send an NPDU, wait a bounded time
-for one — and each crate satisfies it, so a proprietary bridge is implemented
-outside this repository without changing it.
+Driving the core without the runtime — the transaction state machine on a
+clock of your own, lossless decoding — and choosing a datalink are in
+**[core.md](core.md)**.

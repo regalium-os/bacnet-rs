@@ -1,0 +1,12 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Who-Has and I-Have (§16.9, §16.8): which device holds an object.
+
+10 07 2c 00 00 00 01 => who-has object analog-input:1
+10 07 3d 0b 00 43 61 72 20 31 20 6c 6f 61 64 => who-has name "Car 1 load"
+10 07 09 00 1a 03 e8 2c 00 00 00 01 => who-has 0-1000 object analog-input:1
+10 01 c4 02 00 02 57 c4 00 00 00 01 75 0b 00 43 61 72 20 31 20 6c 6f 61 64 => i-have device:599 analog-input:1 "Car 1 load"
+# Neither an identifier nor a name; a low limit with no high one.
+10 07 => error missing-field 2
+10 07 09 00 2c 00 00 00 01 => error missing-field 1

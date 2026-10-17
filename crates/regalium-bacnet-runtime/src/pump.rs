@@ -115,6 +115,9 @@ impl<D: Datalink> Client<D> {
             }
             return;
         }
+        if self.notified(from, route.as_ref(), &apdu) || self.alarmed(from, route.as_ref(), &apdu) {
+            return;
+        }
         if let Some(instance) = self.find(&from, route.as_ref()) {
             let now = self.now();
             self.tsm.receive(instance, &apdu, now);

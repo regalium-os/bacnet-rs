@@ -32,9 +32,18 @@ pub struct Client<D: Datalink> {
     pub(crate) devices: BTreeMap<u32, Device<D::Mac>>,
     /// Devices whose last request was abandoned.
     pub(crate) offline: BTreeSet<u32>,
+    /// When each offline device is next sought, and the wait after that.
+    pub(crate) rebinding: BTreeMap<u32, (Duration, Duration)>,
+    /// Devices that refused `ReadPropertyMultiple`, read singly since.
+    pub(crate) no_rpm: BTreeSet<u32>,
     /// Devices heard from since the current discovery began.
     pub(crate) heard: BTreeSet<u32>,
     pub(crate) events: VecDeque<Event>,
+    /// Watched objects, by the number their updates carry.
+    pub(crate) watches: BTreeMap<u32, crate::watch::Watched>,
+    pub(crate) next_watch: u32,
+    pub(crate) updates: VecDeque<crate::watch::Update>,
+    pub(crate) alarms: VecDeque<crate::alarm::Alarm>,
     /// Finished transactions, by device and invoke id, until collected.
     pub(crate) done: BTreeMap<(u32, u8), Result<Reply, Abandoned>>,
     origin: Instant,
@@ -51,8 +60,14 @@ impl<D: Datalink> Client<D> {
             tsm: Tsm::new(config.tsm),
             devices: BTreeMap::new(),
             offline: BTreeSet::new(),
+            rebinding: BTreeMap::new(),
+            no_rpm: BTreeSet::new(),
             heard: BTreeSet::new(),
             events: VecDeque::new(),
+            watches: BTreeMap::new(),
+            next_watch: 1,
+            updates: VecDeque::new(),
+            alarms: VecDeque::new(),
             done: BTreeMap::new(),
             origin: Instant::now(),
             tracer: Arc::new(NoopTracer),
@@ -122,6 +137,7 @@ impl<D: Datalink> Client<D> {
 
     /// A device answered: if it was offline, it is back.
     pub(crate) fn reached(&mut self, instance: u32) {
+        self.rebinding.remove(&instance);
         if self.offline.remove(&instance) {
             self.event(Event::Reachable(instance));
         }
@@ -131,6 +147,10 @@ impl<D: Datalink> Client<D> {
     pub(crate) fn lost(&mut self, instance: u32, reason: Abandoned) {
         if self.offline.insert(instance) {
             self.event(Event::Offline { instance, reason });
+            if let Some(first) = self.config.rebind {
+                let due = self.now().saturating_add(first);
+                self.rebinding.insert(instance, (due, first));
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ use super::client;
 use regalium_bacnet_core::primitive::{ObjectIdentifier, Primitive};
 use regalium_bacnet_core::service::ServiceError;
 use regalium_bacnet_core::tsm::Abandoned;
-use regalium_bacnet_runtime::{Error, Event, ReadError, ReadRequest};
+use regalium_bacnet_runtime::{Error, Event, ReadRequest, RequestError};
 use regalium_bacnet_schema::object::value::Kind;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -59,12 +59,12 @@ fn a_device_that_refuses_and_one_never_bound_are_told_apart() {
     assert!(
         matches!(
             e,
-            Error::Read(ReadError::Error(ServiceError { class: 1, code: 31 }))
+            Error::Request(RequestError::Error(ServiceError { class: 1, code: 31 }))
         ),
         "{e}"
     );
     let e = c.read_property(42, AI1, 85).unwrap_err();
-    assert!(matches!(e, Error::Read(ReadError::NotBound)), "{e}");
+    assert!(matches!(e, Error::Request(RequestError::NotBound)), "{e}");
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn a_batch_answers_every_read_in_the_order_asked() {
     for (ask, got) in asks.iter().zip(&all) {
         match got {
             Ok(r) => assert_eq!((r.device, r.read.object), (ask.device, AI1)),
-            Err(ReadError::Error(_)) => assert_eq!(ask.read.object, AI99),
+            Err(RequestError::Error(_)) => assert_eq!(ask.read.object, AI99),
             Err(e) => panic!("{e}"),
         }
     }
@@ -101,7 +101,7 @@ fn a_device_going_quiet_is_an_event_once_and_coming_back_is_another() {
         assert!(
             matches!(
                 e,
-                Error::Read(ReadError::Offline(Abandoned::Timeout { attempts: 2 }))
+                Error::Request(RequestError::Offline(Abandoned::Timeout { attempts: 2 }))
             ),
             "{e}"
         );

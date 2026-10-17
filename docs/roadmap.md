@@ -31,8 +31,13 @@ listed in order without inventing numbers for it.
 | 7 | BACnet/IP, Annex J: BVLL, foreign device, BBMD, the UDP link; the datalink trait | **built** |
 | 8 | the first live read, end to end; the probe frames and transacts through the driver | **built** |
 | 9 | the schema tree, `protobuf/`, under the AIP linter | **built** early |
-| — | the breadth of types, services and the object model; polling and COV in the runtime | next |
-| — | MS/TP, BACnet/SC and BACnet/IPv6 | |
+| — | the services: Who-Has, RPM, writes, COV, object lifecycle; polling and COV in the runtime | **built** |
+| — | event notifications; the object model a local device serves from, and the server | **built** |
+| — | server segmentation; seeking quiet devices with backoff | **built** |
+| — | vendor profiles — needs the Schindler revision-12 and -19 object models | waiting |
+| — | BACnet/IPv6 — needs Annex U's BVLL layouts checked against the 135-2016 text or a capture | waiting |
+| — | BACnet/SC, MS/TP — need a decision on TLS and serial crates under the no-C rule | waiting |
+| — | the AIP API served over RPC, and an Event resource in `protobuf/` | last, by decision |
 | 17 | fuzz targets for every decoder | |
 
 ## The pure core

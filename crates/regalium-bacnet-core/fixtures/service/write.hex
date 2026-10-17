@@ -1,0 +1,20 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# WriteProperty and WritePropertyMultiple (§15.9, §15.10), and how they fail.
+
+# present-value 42.5 at priority 8; the same without a priority; and the
+# relinquish — NULL at the same priority — that gives the slot back.
+00 05 01 0f 0c 00 40 00 01 19 55 3e 44 42 2a 00 00 3f 49 08 => write-property analog-output:1 present-value = real 42.5 priority 8
+00 05 03 0f 0c 00 40 00 01 19 55 3e 44 42 2a 00 00 3f => write-property analog-output:1 present-value = real 42.5
+00 05 04 0f 0c 00 40 00 01 19 55 3e 00 3f 49 08 => write-property analog-output:1 present-value = null priority 8
+00 05 02 0f 0c 00 80 00 01 19 4d 3e 75 04 00 46 61 6e 3f => write-property analog-value:1 object-name = string "Fan"
+00 05 05 0f 0c 00 40 00 01 19 57 29 08 3e 44 42 70 00 00 3f => write-property analog-output:1 priority-array index 8 = real 60.0
+# Two objects in one request.
+00 05 06 10 0c 00 80 00 01 1e 09 55 2e 44 3f 80 00 00 2f 09 4d 2e 75 04 00 46 61 6e 2f 1f 0c 00 40 00 01 1e 09 55 2e 44 42 2a 00 00 2f 39 08 1f => write-property-multiple analog-value:1 present-value = real 1.0, object-name = string "Fan"; analog-output:1 present-value = real 42.5 priority 8
+# Refused: write-access-denied (40); and the multiple write that names the
+# first write it could not make.
+50 07 0f 91 02 91 28 => error write-property: property: write-access-denied
+50 08 10 0e 91 02 91 28 0f 1e 0c 00 80 00 01 19 4d 1f => write-property-multiple-error property: write-access-denied at analog-value:1 object-name
+# A write with no value.
+00 05 09 0f 0c 00 40 00 01 19 55 => error missing-field 3

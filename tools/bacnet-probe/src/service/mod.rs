@@ -8,16 +8,13 @@
 //! disagree about the wire. Decoders borrow the APDU body and copy values
 //! out; nothing returned borrows the datagram.
 
+mod bridge;
 pub mod cov;
 pub mod object;
 pub mod read;
 pub mod rpm;
 pub mod who;
 pub mod write;
-
-mod reader;
-
-pub(crate) use reader::Reader;
 
 use crate::tag::{self, Value};
 

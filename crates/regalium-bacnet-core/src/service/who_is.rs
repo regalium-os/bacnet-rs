@@ -4,7 +4,8 @@
 //! Who-Is (§16.10): "which devices are out there?", optionally only those
 //! whose instance falls in a range.
 
-use super::fields::{Fields, unsigned};
+use super::fields::Fields;
+use super::values::unsigned;
 use crate::error::Error;
 use crate::primitive::{Primitive, tag};
 

@@ -11,10 +11,12 @@
 //! A record is a whole APDU, so the corpus also proves which APDU type and
 //! service choice each service is read from.
 
+mod events;
 mod render;
+mod services;
 
 use regalium_bacnet_core::apdu::{Apdu, Pdu};
-use regalium_bacnet_core::service::Service;
+use regalium_bacnet_core::service::{ObjectBody, Service};
 
 /// Every corpus. `just fixtures` fails when one on disk is missing here.
 const CORPORA: &[(&str, &str)] = &[
@@ -29,6 +31,24 @@ const CORPORA: &[(&str, &str)] = &[
     (
         "simulator-services.hex",
         include_str!("../../fixtures/service/simulator-services.hex"),
+    ),
+    (
+        "who-has.hex",
+        include_str!("../../fixtures/service/who-has.hex"),
+    ),
+    (
+        "write.hex",
+        include_str!("../../fixtures/service/write.hex"),
+    ),
+    ("rpm.hex", include_str!("../../fixtures/service/rpm.hex")),
+    ("cov.hex", include_str!("../../fixtures/service/cov.hex")),
+    (
+        "objects.hex",
+        include_str!("../../fixtures/service/objects.hex"),
+    ),
+    (
+        "events.hex",
+        include_str!("../../fixtures/service/events.hex"),
     ),
     (
         "malformed-service.hex",
@@ -58,10 +78,24 @@ fn encode(s: &Service<'_>) -> Option<Vec<u8>> {
     match s {
         Service::WhoIs(w) => w.encode(&mut out),
         Service::IAm(i) => i.encode(&mut out),
+        Service::WhoHas(w) => w.encode(&mut out),
+        Service::IHave(i) => i.encode(&mut out),
         Service::ReadProperty(r) => r.encode(&mut out),
         Service::ReadPropertyAck(a) => a.encode(&mut out),
+        Service::ReadPropertyMultiple(r) => r.encode(&mut out),
+        Service::ReadPropertyMultipleAck(a) => a.encode(&mut out),
+        Service::WriteProperty(w) => w.encode(&mut out),
+        Service::WritePropertyMultiple(w) => w.encode(&mut out),
+        Service::SubscribeCov(c) => c.encode(&mut out),
+        Service::SubscribeCovProperty(c) => c.encode(&mut out),
+        Service::CovNotification { notification, .. } => notification.encode(&mut out),
+        Service::EventNotification { notification, .. } => notification.encode(&mut out),
+        Service::CreateObject(c) => c.encode(&mut out),
+        Service::CreateObjectAck(o) | Service::DeleteObject(o) => ObjectBody(*o).encode(&mut out),
         Service::Error { error, .. } => error.encode(&mut out),
-        Service::Undecoded => return None,
+        Service::CreateObjectError(e) => e.encode(&mut out),
+        Service::WriteMultipleError(e) => e.encode(&mut out),
+        _ => return None,
     }
     Some(out)
 }
@@ -71,7 +105,7 @@ fn decode(octets: &[u8]) -> String {
     match Service::decode(&apdu) {
         Err(e) => render::error(&e),
         Ok(s) => {
-            let text = render::service(&s);
+            let text = services::service(&s);
             match encode(&s) {
                 Some(again) if again != body(&apdu) => format!("{text} (non-canonical)"),
                 _ => text,
@@ -82,7 +116,7 @@ fn decode(octets: &[u8]) -> String {
 
 #[test]
 fn every_service_fixture_record_decodes_to_its_meaning_and_round_trips() {
-    assert!(CORPORA.len() >= 4, "a walker that finds nothing must fail");
+    assert!(CORPORA.len() >= 10, "a walker that finds nothing must fail");
     let mut failures = Vec::new();
     let mut total = 0;
     for (file, text) in CORPORA {

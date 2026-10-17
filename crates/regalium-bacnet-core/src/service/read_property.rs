@@ -3,7 +3,8 @@
 
 //! `ReadProperty` (§15.5): one property of one object, and its answer.
 
-use super::fields::{Fields, enumerated, object, unsigned};
+use super::fields::Fields;
+use super::values::{enumerated, object, unsigned};
 use crate::error::Error;
 use crate::primitive::{ObjectIdentifier, Primitive, tag};
 use crate::tag::{Element, Elements, Header, elements};

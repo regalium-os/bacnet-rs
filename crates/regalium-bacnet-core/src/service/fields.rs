@@ -7,7 +7,7 @@
 //! opening and a closing tag.
 
 use crate::error::{Error, ErrorKind};
-use crate::primitive::{ObjectIdentifier, Primitive, tag};
+use crate::primitive::Primitive;
 use crate::tag::{Class, Element};
 
 /// The marker [`ErrorKind::MissingField`] uses for an application tag.
@@ -106,6 +106,28 @@ impl<'a> Fields<'a> {
         }
     }
 
+    /// The octets of constructed field `n` when the next element opens it,
+    /// `None` when the field is absent.
+    pub(crate) fn optional_constructed(&mut self, n: u8) -> Result<Option<&'a [u8]>, Error<'a>> {
+        match self.peek()? {
+            Some((e, _)) if e.is_opening() && e.header.number == n => self.constructed(n).map(Some),
+            _ => Ok(None),
+        }
+    }
+
+    /// Every item of a list the octets hold, each read by `item`, until the
+    /// octets run out (§20.2.1.3.2: a SEQUENCE OF has no count).
+    pub(crate) fn list<T>(
+        mut self,
+        mut item: impl FnMut(&mut Self) -> Result<T, Error<'a>>,
+    ) -> Result<Vec<T>, Error<'a>> {
+        let mut all = Vec::new();
+        while !self.is_empty() {
+            all.push(item(&mut self)?);
+        }
+        Ok(all)
+    }
+
     /// Whether anything is left.
     pub(crate) fn is_empty(&self) -> bool {
         self.rest().is_empty()
@@ -119,32 +141,4 @@ impl<'a> Fields<'a> {
             Err(self.fail(ErrorKind::Trailing))
         }
     }
-}
-
-/// An Unsigned that must fit 32 bits: an instance, a property, a length.
-pub(crate) fn unsigned<'a>(p: &Primitive<'a>) -> Result<u32, Error<'a>> {
-    match p {
-        Primitive::Unsigned(v) => u32::try_from(*v).map_err(|_| invalid(tag::UNSIGNED)),
-        _ => Err(invalid(tag::UNSIGNED)),
-    }
-}
-
-/// An Enumerated.
-pub(crate) fn enumerated<'a>(p: &Primitive<'a>) -> Result<u32, Error<'a>> {
-    match p {
-        Primitive::Enumerated(v) => Ok(*v),
-        _ => Err(invalid(tag::ENUMERATED)),
-    }
-}
-
-/// An object identifier.
-pub(crate) fn object<'a>(p: &Primitive<'a>) -> Result<ObjectIdentifier, Error<'a>> {
-    match p {
-        Primitive::ObjectIdentifier(id) => Ok(*id),
-        _ => Err(invalid(tag::OBJECT_IDENTIFIER)),
-    }
-}
-
-const fn invalid<'a>(tag: u8) -> Error<'a> {
-    Error::new(ErrorKind::InvalidValue { tag }, &[], 0)
 }

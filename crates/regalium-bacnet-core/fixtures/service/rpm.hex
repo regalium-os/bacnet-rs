@@ -1,0 +1,15 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# ReadPropertyMultiple (§15.7): requests, and answers that carry a value or
+# an error per property.
+
+00 05 01 0e 0c 00 00 00 01 1e 09 55 09 6f 09 75 1f => read-property-multiple analog-input:1 [present-value, status-flags, units]
+# Every property of one object, and one slot of another's priority array.
+00 05 02 0e 0c 00 00 00 01 1e 09 08 1f 0c 00 40 00 01 1e 09 57 19 08 1f => read-property-multiple analog-input:1 [all]; analog-output:1 [priority-array index 8]
+# Two values and an error: description is not a property this object has.
+30 01 0e 0c 00 00 00 01 1e 29 55 4e 44 42 c8 00 00 4f 29 6f 4e 82 04 00 4f 29 1c 5e 91 02 91 20 5f 1f => read-property-multiple-ack analog-input:1 present-value = real 100.0, status-flags = bits 0000, description = error property: unknown-property
+# Two objects answered.
+30 02 0e 0c 00 00 00 01 1e 29 55 4e 44 42 c8 00 00 4f 1f 0c 00 40 00 01 1e 29 57 39 08 4e 44 42 70 00 00 4f 1f => read-property-multiple-ack analog-input:1 present-value = real 100.0; analog-output:1 priority-array index 8 = real 60.0
+# A result that is neither a value nor an error.
+30 03 0e 0c 00 00 00 01 1e 29 55 1f => error missing-field 5

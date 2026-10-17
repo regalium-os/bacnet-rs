@@ -1,0 +1,18 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Change of value (§13): subscriptions, their cancellation, and the
+# notifications they bring.
+
+# Process 1 watches analog-input 1, unconfirmed, for 300 s; then cancels.
+00 05 01 05 09 01 1c 00 00 00 01 29 00 3a 01 2c => subscribe-cov process 1 analog-input:1 confirmed false lifetime 300
+00 05 02 05 09 01 1c 00 00 00 01 => subscribe-cov process 1 analog-input:1 cancel
+# One property, confirmed, reporting moves of 0.5 or more.
+00 05 03 1c 09 02 1c 00 00 00 01 29 01 3a 01 2c 4e 09 55 4f 5c 3f 00 00 00 => subscribe-cov-property process 2 analog-input:1 confirmed true lifetime 300 property present-value increment 0.5
+# What the device sends: present-value and status-flags, unconfirmed with
+# an indefinite subscription, confirmed with 290 s left.
+10 02 09 01 1c 02 00 02 57 2c 00 00 00 01 39 00 4e 09 55 2e 44 41 ac 00 00 2f 09 6f 2e 82 04 00 2f 4f => cov-notification unconfirmed process 1 device:599 analog-input:1 remaining 0: present-value = real 21.5, status-flags = bits 0000
+00 05 07 01 09 01 1c 02 00 02 57 2c 00 00 00 01 3a 01 22 4e 09 55 2e 44 41 ac 00 00 2f 4f => cov-notification confirmed process 1 device:599 analog-input:1 remaining 290: present-value = real 21.5
+# A device that does not do COV: optional-functionality-not-supported (45).
+50 08 05 91 05 91 2d => error subscribe-cov: services: optional-functionality-not-supported
+00 05 09 05 09 01 => error missing-field 1

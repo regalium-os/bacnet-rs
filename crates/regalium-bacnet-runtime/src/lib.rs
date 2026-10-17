@@ -44,18 +44,31 @@
 //! and reconnection come next, and an async surface wraps this one rather
 //! than replacing it.
 
+mod alarm;
+mod batch;
 mod client;
 mod config;
+mod cov;
 mod device;
 mod discover;
 mod error;
+mod listen;
 mod pump;
 mod read;
 mod reading;
+mod rebind;
+mod rpm;
+mod serve;
+mod server;
+mod watch;
+mod write;
 
+pub use alarm::Alarm;
 pub use client::Client;
 pub use config::Config;
 pub use device::{Device, Event, Route};
-pub use error::{Error, ReadError};
+pub use error::{Error, RequestError};
 pub use read::ReadRequest;
 pub use reading::Reading;
+pub use server::Server;
+pub use watch::{Source, Update, Watch};

@@ -10,17 +10,27 @@
 //! | `ReadProperty-ACK` (§15.5) | [`Property`] with its [`Value`](crate::object::Value) |
 //! | Error for `ReadProperty` (§18) | [`Property`] with its [`PropertyError`] |
 //! | a property's resource name | the `ReadProperty` that gets it |
+//! | `ReadPropertyMultiple-ACK` (§15.7) | a [`Property`] per result, value or error |
+//! | COV notification (§13.6, §13.7) | [`Notification`](crate::object::Notification) |
+//! | [`Subscription`](crate::object::Subscription) | the `SubscribeCOV` or `SubscribeCOVProperty` that makes it |
+//! | an updated [`Property`] | the `WriteProperty` that sets it |
 //!
 //! The conversions copy: a model value outlives the datagram it came from.
 //! They read no clock, so `read_time` and `discover_time` are the caller's
 //! to set when it knows when the datagram arrived.
 
+mod encode;
 mod names;
+mod services;
 mod value;
 
+pub use encode::encode_value;
 pub use names::{
     device_name, object_name, object_segment, object_type_name, parse_device_name,
     parse_object_segment, parse_property_name, property_name, property_segment,
+};
+pub use services::{
+    CovRequest, Write, notification, properties, subscribe, subscription_name, write,
 };
 pub use value::value;
 

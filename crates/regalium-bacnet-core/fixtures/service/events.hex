@@ -1,0 +1,16 @@
+# Copyright 2026 RegaliumOS™.
+# SPDX-License-Identifier: Apache-2.0
+
+# Event notifications (§13.8, §13.9): alarms raised, cleared, acknowledged.
+
+# Analog-input 1 went high-limit at 2026-10-17 14:30, class 5, priority 100,
+# out-of-range (5), "High load", to be acknowledged: 450.0 against 400.0.
+10 03 09 01 1c 02 00 02 57 2c 00 00 00 01 3e 2e a4 7e 0a 11 06 b4 0e 1e 00 00 2f 3f 49 05 59 64 69 05 7d 0a 00 48 69 67 68 20 6c 6f 61 64 89 00 99 01 a9 00 b9 03 ce 5e 0c 43 e1 00 00 1a 04 80 2c 3f 80 00 00 3c 43 c8 00 00 5f cf => event-notification unconfirmed process 1 device:599 analog-input:1 at 2026-10-17 14:30:00.00 class 5 priority 100 type 5 alarm "High load" ack-required from 0 to 3 values [5]{, [0] 43e10000, [1] 0480, [2] 3f800000, [3] 43c80000, }[5]
+# Its acknowledgement, confirmed, stamped by sequence number 42.
+00 05 05 02 09 02 1c 02 00 02 57 2c 00 00 00 01 3e 19 2a 3f 49 05 59 64 69 05 89 02 b9 00 => event-notification confirmed process 2 device:599 analog-input:1 at sequence 42 class 5 priority 100 type 5 ack-notification to 0
+# A time of day alone, and no message.
+10 03 09 01 1c 02 00 02 57 2c 00 00 00 01 3e 0c 0e 1e 00 00 3f 49 05 59 64 69 05 89 01 b9 00 => event-notification unconfirmed process 1 device:599 analog-input:1 at time 14:30:00.00 class 5 priority 100 type 5 event to 0
+# A recipient that refuses: services, service-request-denied (29).
+50 06 02 91 05 91 1d => error event-notification: services: code-29
+# Cut off after the process identifier.
+10 03 09 01 => error missing-field 1

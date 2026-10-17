@@ -9,9 +9,13 @@
 //! subscriber renews before then. The `subscriber-process-identifier` is the
 //! subscriber's own number, echoed back in every notification, which is how
 //! a notification is matched to the subscription that asked for it.
+//!
+//! The grammar is the driver's; the values are the probe's.
 
-use super::{PropertyRef, Reader};
-use crate::tag::{self, ObjectId, Value};
+use super::PropertyRef;
+use super::bridge::{id, object, octets, property, reference, values};
+use crate::tag::{ObjectId, Value};
+use regalium_bacnet::service::{CovNotification, PropertyValue, SubscribeCov};
 
 /// `SubscribeCOV` parameters. Without `confirmed` and `lifetime` it is a
 /// cancellation (§13.14.1.4).
@@ -46,86 +50,68 @@ pub struct Notification {
 #[must_use]
 pub fn subscribe(s: &Subscribe) -> Vec<u8> {
     let mut out = Vec::new();
-    tag::push_unsigned(&mut out, 0, true, s.process.into());
-    tag::push_object(&mut out, 1, true, s.object);
-    if let Some(confirmed) = s.confirmed {
-        tag::push_header(&mut out, 2, true, 1);
-        out.push(u8::from(confirmed));
+    SubscribeCov {
+        process: s.process,
+        object: id(s.object),
+        confirmed: s.confirmed,
+        lifetime: s.lifetime,
     }
-    if let Some(lifetime) = s.lifetime {
-        tag::push_unsigned(&mut out, 3, true, lifetime.into());
-    }
+    .encode(&mut out);
     out
 }
 
 /// Decodes a `SubscribeCOV` body, borrowing it.
 #[must_use]
 pub fn decode_subscribe(body: &[u8]) -> Option<Subscribe> {
-    let mut r = Reader::new(body);
-    let process = u32::try_from(r.unsigned(0)?).ok()?;
-    let object = r.object(1)?;
-    let confirmed = if r.at_context(2) {
-        Some(r.boolean(2)?)
-    } else {
-        None
-    };
-    let lifetime = r.optional_unsigned(3)?.and_then(|l| u32::try_from(l).ok());
+    let s = SubscribeCov::decode(body).ok()?;
     Some(Subscribe {
-        process,
-        object,
-        confirmed,
-        lifetime,
+        process: s.process,
+        object: object(s.object),
+        confirmed: s.confirmed,
+        lifetime: s.lifetime,
     })
 }
 
 /// A COV notification body: the same for the confirmed and unconfirmed forms.
 #[must_use]
 pub fn notification(n: &Notification) -> Vec<u8> {
+    let encoded: Vec<Vec<u8>> = n.values.iter().map(|(_, v)| octets(v)).collect();
+    let values = n
+        .values
+        .iter()
+        .zip(&encoded)
+        .map(|((p, _), value)| PropertyValue {
+            property: reference(*p),
+            value,
+            priority: None,
+        })
+        .collect();
     let mut out = Vec::new();
-    tag::push_unsigned(&mut out, 0, true, n.process.into());
-    tag::push_object(&mut out, 1, true, n.device);
-    tag::push_object(&mut out, 2, true, n.object);
-    tag::push_unsigned(&mut out, 3, true, n.time_remaining.into());
-    tag::push_opening(&mut out, 4);
-    for (p, values) in &n.values {
-        tag::push_unsigned(&mut out, 0, true, p.property.into());
-        if let Some(i) = p.index {
-            tag::push_unsigned(&mut out, 1, true, i.into());
-        }
-        tag::push_opening(&mut out, 2);
-        for v in values {
-            tag::push_value(&mut out, v);
-        }
-        tag::push_closing(&mut out, 2);
+    CovNotification {
+        process: n.process,
+        device: id(n.device),
+        object: id(n.object),
+        time_remaining: n.time_remaining,
+        values,
     }
-    tag::push_closing(&mut out, 4);
+    .encode(&mut out);
     out
 }
 
 /// Decodes a notification body, borrowing it.
 #[must_use]
 pub fn decode_notification(body: &[u8]) -> Option<Notification> {
-    let mut r = Reader::new(body);
-    let process = u32::try_from(r.unsigned(0)?).ok()?;
-    let device = r.object(1)?;
-    let object = r.object(2)?;
-    let time_remaining = u32::try_from(r.unsigned(3)?).ok()?;
-    r.opening(4)?;
-    let mut values = Vec::new();
-    while !r.at_closing(4) {
-        let property = u32::try_from(r.unsigned(0)?).ok()?;
-        let index = r.optional_unsigned(1)?.and_then(|i| u32::try_from(i).ok());
-        r.opening(2)?;
-        let v = r.values_until(2)?;
-        r.optional_unsigned(3)?; // Priority, for commandable properties.
-        values.push((PropertyRef { property, index }, v));
-    }
-    r.closing(4)?;
+    let n = CovNotification::decode(body).ok()?;
+    let values = n
+        .values
+        .iter()
+        .map(|v| Some((property(v.property), values(v.value)?)))
+        .collect::<Option<Vec<_>>>()?;
     Some(Notification {
-        process,
-        device,
-        object,
-        time_remaining,
+        process: n.process,
+        device: object(n.device),
+        object: object(n.object),
+        time_remaining: n.time_remaining,
         values,
     })
 }

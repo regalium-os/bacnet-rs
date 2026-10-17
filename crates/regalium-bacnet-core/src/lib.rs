@@ -23,7 +23,8 @@
 //! | `apdu` | the eight PDU types (§20.1.2–§20.1.9) |
 //! | `npdu` | network layer: NPCI, DNET/DADR/SNET/SADR, hop count, network messages (Clause 6) |
 //! | `service` | confirmed, unconfirmed and acknowledgement service codecs (Clauses 13–17) |
-//! | `obj` | the object model: identifiers, property references, the database trait |
+//! | `obj` | the object model: the database trait a local device serves from, and one in memory |
+//! | `server` | a local device's answers to Who-Is, Who-Has, reads and writes |
 //! | `tsm` | the transaction state machine: invoke ids, retries, segmentation |
 //! | `datalink` | the trait every datalink satisfies: send an NPDU, wait for one |
 //!
@@ -61,7 +62,9 @@ pub mod datalink;
 pub mod enumerated;
 mod error;
 pub mod npdu;
+pub mod obj;
 pub mod primitive;
+pub mod server;
 pub mod service;
 pub mod tag;
 pub mod tsm;

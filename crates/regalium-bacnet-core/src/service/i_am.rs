@@ -4,7 +4,8 @@
 //! I-Am (§16.1): a device announcing itself, in answer to Who-Is or when it
 //! starts.
 
-use super::fields::{Fields, enumerated, object, unsigned};
+use super::fields::Fields;
+use super::values::{enumerated, object, unsigned};
 use crate::enumerated::Segmentation;
 use crate::error::Error;
 use crate::primitive::{ObjectIdentifier, Primitive};
