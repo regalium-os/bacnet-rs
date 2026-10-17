@@ -6,6 +6,7 @@
 //! Settings tab in `settings`.
 
 mod browse;
+mod edit;
 mod more;
 mod settings;
 
@@ -19,6 +20,9 @@ use std::time::Duration;
 
 /// How long a changed value stays highlighted.
 pub(crate) const FRESH: Duration = Duration::from_secs(3);
+
+/// How long the outcome of a change stays in the footer.
+const NOTICE: Duration = Duration::from_secs(6);
 
 pub(crate) fn draw(frame: &mut Frame<'_>, app: &mut App) {
     let [top, body, bottom] = Layout::vertical([
@@ -37,6 +41,9 @@ pub(crate) fn draw(frame: &mut Frame<'_>, app: &mut App) {
     footer(frame, app, bottom);
     if app.help {
         more::help(frame);
+    }
+    if let Some(e) = &app.edit {
+        edit::draw(frame, e);
     }
 }
 
@@ -93,12 +100,17 @@ fn footer(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 .bg(Color::Yellow),
         );
     }
+    if let Some((_, text, ok)) = app.notice.as_ref().filter(|(at, ..)| at.elapsed() < NOTICE) {
+        let colour = if *ok { Color::Green } else { Color::Red };
+        spans.push(Span::raw(format!(" {text} ")).fg(Color::Black).bg(colour));
+    }
     for (key, what) in [
         ("?", "help"),
         ("tab", "focus"),
         ("enter", "reload"),
         ("r", "discover"),
         ("w", "live"),
+        ("e", "write"),
         ("s", "settings"),
         ("q", "quit"),
     ] {

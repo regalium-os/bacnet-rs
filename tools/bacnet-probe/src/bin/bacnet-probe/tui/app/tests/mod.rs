@@ -186,5 +186,6 @@ fn the_poll_interval_is_clamped() {
     assert_eq!(app.interval, std::time::Duration::from_millis(250));
 }
 
+mod edit;
 mod render;
 mod settings;

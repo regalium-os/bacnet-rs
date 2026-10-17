@@ -26,7 +26,7 @@ imported by software that must keep talking to lift controllers for years.
 | BACnet/SC | Annex AB, WebSocket and TLS, hub and direct | planned |
 | **BACnet/IPv6** | Annex U: multicast, virtual MAC addresses, BBMD — **[the full list](docs/ipv6.md)** | planned |
 | Telemetry | metrics seam and OTLP export; spans with Phase 3 | **built** in part |
-| Field probe | discover, browse, watch, export, dissect; TUI with live settings | **built** |
+| Field probe | discover, browse, watch, write, create, delete, export, dissect; serves the API; TUI | **built** |
 | Gates | size, licence, purity, layering, dependencies — each proven to bite | **built** |
 
 Every crate's features, and the order they come in, are in
@@ -156,7 +156,9 @@ accepted beneath the otel adapter and the probe only.
 ## Field probe
 
 [`tools/bacnet-probe`](tools/bacnet-probe) discovers, browses, watches,
-exports and dissects BACnet/IP devices today, as a TUI and a scriptable CLI:
+changes, exports and dissects BACnet/IP devices today, as a TUI and a
+scriptable CLI, and serves the schema's device, object and property API over
+its own client:
 
 ```sh
 brew install regalium-os/tap/bacnet-probe

@@ -2278,7 +2278,9 @@ name = "regalium-bacnet-probe"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "prost-types",
  "ratatui",
+ "regalium-bacnet-schema",
  "regalium-bacnet-telemetry",
  "regalium-bacnet-telemetry-otel",
 ]

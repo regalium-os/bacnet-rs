@@ -1,7 +1,8 @@
 # bacnet-probe
 
-Discover, browse, watch and export BACnet/IP devices from a terminal: an
-interactive TUI, and a scriptable CLI whose output is a table or JSON.
+Discover, browse, watch, change and export BACnet/IP devices from a
+terminal: an interactive TUI, and a scriptable CLI whose output is a table or
+JSON.
 
 ```sh
 brew install regalium-os/tap/bacnet-probe
@@ -25,6 +26,31 @@ bacnet-probe scan --detail --format json      # every property of every object
 bacnet-probe --otlp localhost:4317 export     # run headless; everything as metrics
 bacnet-probe dissect '81 0a 00 11 …'          # break a captured datagram down, offline
 ```
+
+### Changing a device
+
+Devices, objects and properties are addressed by resource name, the same
+names the API in [`protobuf/`](../../protobuf) declares:
+
+```sh
+bacnet-probe list devices                                   # discover, then read each
+bacnet-probe get devices/599/objects/analog-output-1        # value, priority array, health
+bacnet-probe write devices/599/objects/analog-output-1 75 --priority 8
+bacnet-probe write devices/599/objects/analog-output-1 null --priority 8   # relinquish
+bacnet-probe write devices/599/objects/multi-state-value-1 Independent      # a state by name
+bacnet-probe create devices/599 --type analog-value --display-name Setpoint --value 21.5
+bacnet-probe delete devices/599/objects/analog-value-1
+```
+
+A value is read as the type the property already holds, so `75` is sent as a
+REAL to an analog output and `Independent` as the state number its
+state-text gives. What prints afterwards is read back from the device: on a
+commandable point that is the winner of the priority array, and the probe
+says so when a higher slot keeps your write from taking effect.
+
+**A write changes the equipment.** It is sent the moment the command runs,
+with no confirmation, and a value at priority 1 to 8 can override safety
+logic. Prefer priority 16 for testing, and relinquish what you wrote.
 
 Every command takes `--format table|json`. stdout carries only the result;
 progress and `--explain` (a field-by-field dissection of every packet) go to
@@ -54,6 +80,14 @@ moves onto the driver — see [docs/ipv6.md](../../docs/ipv6.md).
 | `2` Packets | every datagram sent and received, dissected field by field |
 | `3` Log | discoveries, value changes, points going offline, settings applied |
 | `4` Settings | the network options, editable while the probe runs (`s` from anywhere) |
+
+**Changing a device** works from the Browse tab. `e` writes the selected
+property, or the selected object's present-value; `n` relinquishes, offering
+the slot in control; `a` creates an object; `x` deletes the selected one. The
+form shows the current value and the occupied priority slots, reads what you
+type as `write` does, and then says in one sentence what will be sent, where,
+and at what priority: nothing goes to the device until you press `y`. The
+outcome shows in the footer and the log, and what changed is read again.
 
 **Settings** lists the target, UDP port, local socket, scan ranges, unicast
 sweep and its rate, BBMD and registration TTL, I-Am wait, reply timeout and
@@ -140,14 +174,17 @@ bacnet-probe --target 127.0.0.1 --port 47809 --bind 127.0.0.1:0  # then any comm
 ```
 
 The simulator answers Who-Is, Who-Has, ReadProperty and
-ReadPropertyMultiple, sends COV notifications, accepts foreign device
-registration, and moves its values over time. The tests run every feature
+ReadPropertyMultiple; accepts writes through a priority array, and creates
+and deletes objects, refusing each with a controller's error codes; sends COV
+notifications, written changes included; accepts foreign device
+registration; and moves its values over time. The tests run every feature
 against it over real UDP.
 
 ## Scope
 
-Read-only: the probe never writes a property, so it is safe to point at
-equipment in service. It does not reassemble segmented replies; it keeps its
+Reading is safe to point at equipment in service; `write`, `create` and
+`delete` are not, and only those commands send anything that changes a
+device. The probe does not reassemble segmented replies; it keeps its
 requests small enough not to need them.
 
 It carries a small codec of its own because the driver's core does not decode

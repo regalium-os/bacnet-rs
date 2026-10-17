@@ -14,6 +14,7 @@
 mod args;
 mod cli;
 mod connect;
+mod help;
 mod tui;
 
 use args::{Cli, Cmd, Net, Telemetry};
@@ -61,6 +62,11 @@ fn run(cli: Cli) -> Result {
         Some(Cmd::Watch(a)) => cli::watch::watch(&mut connect(net, meter)?, net, &a),
         Some(Cmd::Scan(a)) => cli::scan::run(&mut connect(net, meter)?, net, &a),
         Some(Cmd::Export(a)) => cli::export::run(&mut connect(net, meter)?, net, &a),
+        Some(Cmd::Get(a)) => cli::resource::get(&mut api(net, meter)?, &a),
+        Some(Cmd::List(a)) => cli::resource::list(&mut api(net, meter)?, &a),
+        Some(Cmd::Write(a)) => cli::resource::write(&mut api(net, meter)?, &a),
+        Some(Cmd::Create(a)) => cli::resource::create(&mut api(net, meter)?, &a),
+        Some(Cmd::Delete(a)) => cli::resource::delete(&mut api(net, meter)?, &a),
         Some(Cmd::Dissect(_)) => Ok(()),
     }
 }
@@ -86,6 +92,14 @@ fn tui(net: &Net, meter: Arc<dyn Meter>, interval: Duration) -> Result {
         interval,
         connect::tui_connector(meter),
     )?)
+}
+
+/// The API over a connected client, discovering as `--target`/`--scan` say.
+fn api(net: &Net, meter: Arc<dyn Meter>) -> Result<bacnet_probe::api::Api> {
+    Ok(bacnet_probe::api::Api::new(
+        connect(net, meter)?,
+        cli::plan(net)?,
+    ))
 }
 
 fn connect(net: &Net, meter: Arc<dyn Meter>) -> Result<Client> {

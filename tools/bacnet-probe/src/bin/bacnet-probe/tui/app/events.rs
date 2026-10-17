@@ -52,6 +52,12 @@ impl App {
             Event::Log(line) => self.log(line),
             Event::Connected(notes) => self.connected(notes),
             Event::ConnectFailed(error) => return self.connect_failed(error),
+            Event::Changed {
+                instance,
+                what,
+                structural,
+                result,
+            } => return self.changed(instance, &what, structural, &result),
         }
         Vec::new()
     }

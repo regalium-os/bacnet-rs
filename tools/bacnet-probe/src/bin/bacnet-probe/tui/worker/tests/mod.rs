@@ -167,4 +167,5 @@ fn every_datagram_in_both_directions_is_reported_as_a_packet() {
     assert!(dir(Direction::Sent) && dir(Direction::Received));
 }
 
+mod change;
 mod reopen;

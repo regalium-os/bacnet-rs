@@ -19,20 +19,23 @@
 //! | `metrics` | every instrument the probe records, and the labels on them |
 //! | `names`, `props`, `explain`, `json`, `dissect` | turning numbers into meaning, JSON, and packet breakdowns |
 //! | `sim` | a simulated lift gateway, for tests and demonstrations |
+//! | `api` | the schema's device, object and property services, served over `client` |
 //!
 //! Must not: name an OpenTelemetry type, or decide where metrics go. It
 //! records through the seam's `Meter`; the binary chooses the exporter.
 //!
-//! Allowed imports: `regalium-bacnet-telemetry`.
+//! Allowed imports: `regalium-bacnet-telemetry`, and `regalium-bacnet-schema`
+//! for the messages `api` takes and returns.
 //!
 //! # Interim codec
 //!
 //! The probe carries its own codec because the driver's core decodes nothing
 //! until Phase 3; it moves onto `regalium-bacnet` at Phase 8, the first live
 //! read, and this codec is deleted. It is deliberately the smallest codec
-//! that reads a real controller: no segmentation (requests are kept small
-//! enough not to need it), no writes.
+//! that reads and changes a real controller: no segmentation (requests are
+//! kept small enough not to need it).
 
+pub mod api;
 pub mod client;
 pub mod dissect;
 pub mod explain;

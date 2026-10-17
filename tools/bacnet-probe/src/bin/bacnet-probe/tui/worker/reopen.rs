@@ -10,11 +10,12 @@
 //! a port held by another process, a BBMD that refuses — the old ones are
 //! opened again, so a typo costs the user an error message, not the session.
 
-use super::{Command, Event, Worker, traced};
+use super::{Command, Event, Packet, Worker};
 use crate::args::Net;
 use crate::connect::{Connector, Opened};
 use bacnet_probe::Client;
 use std::net::SocketAddr;
+use std::sync::mpsc::Sender;
 use std::time::{Duration, Instant};
 
 /// How long to spend cancelling COV subscriptions before reopening. One the
@@ -105,4 +106,18 @@ impl Worker {
         self.labels.clear();
         opened.notes
     }
+}
+
+/// `client`, reporting every datagram as an `Event::Packet`.
+pub(super) fn traced(client: Client, events: &Sender<Event>) -> Client {
+    let packets = events.clone();
+    client.with_trace(move |direction, peer, bytes| {
+        let packet = Packet {
+            at: Instant::now(),
+            direction,
+            peer,
+            bytes: bytes.to_vec(),
+        };
+        let _ = packets.send(Event::Packet(packet));
+    })
 }

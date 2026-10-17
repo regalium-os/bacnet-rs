@@ -46,8 +46,20 @@ impl Sim {
         if current.len() == 1 && w.values.len() != 1 || !same_type(&current, &w.values) {
             return Err((2, 9)); // property: invalid-data-type
         }
-        if p == OUT_OF_SERVICE && w.values.first() == Some(&Value::Bool(true)) {
-            self.pinned.insert(object);
+        if p == OUT_OF_SERVICE {
+            let on = w.values.first() == Some(&Value::Bool(true));
+            if on {
+                self.pinned.insert(object);
+            }
+            // The OUT_OF_SERVICE status flag follows the property (§12).
+            if let Some(Value::Bits(flags)) = self
+                .props
+                .get_mut(&(object, 111))
+                .and_then(|v| v.first_mut())
+                && let Some(bit) = flags.get_mut(3)
+            {
+                *bit = on;
+            }
         }
         self.props.insert((object, p), w.values.clone());
         Ok(())

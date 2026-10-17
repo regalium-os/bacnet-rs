@@ -4,9 +4,11 @@
 //! TUI state. Pure: events and keys go in, worker commands come out, so the
 //! whole interaction is testable without a terminal or a network.
 
+use super::edit::Edit;
 use super::settings::Form;
 use super::worker::{Command, Packet};
 
+mod edit;
 mod events;
 mod select;
 mod settings;
@@ -82,6 +84,10 @@ pub(crate) struct App {
     pub(crate) interval: Duration,
     /// The Settings tab: the network options, editable.
     pub(crate) settings: Form,
+    /// A change being written, created or deleted, if a form is open.
+    pub(crate) edit: Option<Edit>,
+    /// The last change's outcome, shown in the footer for a few seconds.
+    pub(crate) notice: Option<(Instant, String, bool)>,
     pub(crate) help: bool,
     pub(crate) quit: bool,
 }
@@ -111,6 +117,8 @@ impl App {
             watching: true,
             interval: Duration::from_secs(2),
             settings: Form::new(crate::args::defaults(), Duration::from_secs(2)),
+            edit: None,
+            notice: None,
             help: false,
             quit: false,
         };

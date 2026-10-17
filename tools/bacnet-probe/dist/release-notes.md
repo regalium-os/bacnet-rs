@@ -1,4 +1,4 @@
-`bacnet-probe`: discover, browse, watch and export BACnet/IP devices — an
+`bacnet-probe`: discover, browse, watch, change and export BACnet/IP devices — an
 interactive TUI and a scriptable CLI.
 
 ```sh

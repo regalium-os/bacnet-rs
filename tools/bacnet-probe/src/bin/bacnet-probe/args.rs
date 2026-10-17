@@ -11,7 +11,7 @@ use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::time::Duration;
 
 #[derive(Parser)]
-#[command(name = "bacnet-probe", version, about = "Discover, browse, watch and export BACnet/IP devices", after_help = EXAMPLES)]
+#[command(name = "bacnet-probe", version, about = "Discover, browse, watch, change and export BACnet/IP devices", after_help = crate::help::EXAMPLES)]
 pub(crate) struct Cli {
     #[command(subcommand)]
     pub(crate) command: Option<Cmd>,
@@ -20,22 +20,6 @@ pub(crate) struct Cli {
     #[command(flatten)]
     pub(crate) telemetry: Telemetry,
 }
-
-const EXAMPLES: &str = "\
-Examples:
-  bacnet-probe                                   interactive TUI, broadcast discovery
-  bacnet-probe --scan '192.168.*' whois          sweep every /24 in 192.168.0.0/16
-  bacnet-probe --bbmd 10.1.0.1 whois             reach another subnet through its BBMD
-  bacnet-probe read 599 analog-input:1           present-value, with units / state names
-  bacnet-probe find 'Car 1 load'                 which device holds this object (Who-Has)
-  bacnet-probe watch 599 --every 1               live values: COV where allowed, else polled
-  bacnet-probe scan --detail --format json > scan.json
-  bacnet-probe --otlp localhost:4317 export      every point, continuously, as metrics
-  bacnet-probe dissect '81 0a 00 11 01 04 00 05 01 0c 0c 02 00 02 57 19 4d'
-
-Without hardware:
-  cargo run -p regalium-bacnet-probe --example sim_device
-  bacnet-probe --target 127.0.0.1 --port 47809 --bind 127.0.0.1:0";
 
 /// Where and how to talk `BACnet`/IP. Equality is what the TUI's settings
 /// tab compares to decide whether an edit needs the socket rebound.
@@ -115,6 +99,16 @@ pub(crate) enum Cmd {
     Export(cli::export::ExportArgs),
     /// Dissect a hex-dumped datagram, offline (stdin if none given).
     Dissect(cli::dissect::DissectArgs),
+    /// Read a device, object or property by resource name.
+    Get(cli::resource::NameArgs),
+    /// List devices (discovering them), a device's objects, or an object's properties.
+    List(cli::resource::NameArgs),
+    /// Write a property (`WriteProperty`), typed as the property holds it.
+    Write(cli::resource::WriteArgs),
+    /// Create an object in a device (`CreateObject`).
+    Create(cli::resource::CreateArgs),
+    /// Delete an object from a device (`DeleteObject`).
+    Delete(cli::resource::NameArgs),
 }
 
 /// `table` for people, `json` for programs.

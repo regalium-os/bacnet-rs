@@ -10,7 +10,7 @@
 mod batch;
 mod report;
 
-pub use batch::{BATCH, object_ids, read, read_many};
+pub use batch::{BATCH, object_ids, object_ids_in, read, read_many};
 pub use report::ObjectReport;
 
 use crate::client::{Client, Device};

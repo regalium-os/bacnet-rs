@@ -5,6 +5,10 @@
 //! in `settings::edit::KEYS`; the help overlay renders both, so neither can
 //! drift from what the keys do.
 
+mod help;
+
+pub(crate) use help::HELP;
+
 use super::app::{App, Focus, Tab};
 use super::worker::Command;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -24,26 +28,6 @@ fn moved(at: usize, delta: isize, len: usize) -> usize {
     }
 }
 
-pub(crate) const HELP: &[(&str, &str)] = &[
-    ("1 2 3 4", "Browse / Packets / Log / Settings tab"),
-    ("s", "Settings: target, port, scan ranges, BBMD, timing"),
-    ("Tab, ← →", "move focus: devices, objects, properties"),
-    ("↑ ↓  j k", "move selection"),
-    ("PgUp PgDn", "move ten rows"),
-    ("g G  Home End", "first / last row"),
-    ("Enter", "reload the selected device or object"),
-    ("r", "re-run discovery (Who-Is)"),
-    (
-        "w",
-        "start / stop following live values (COV, else polling)",
-    ),
-    ("+ -", "poll faster / slower (points without COV)"),
-    ("f", "packets: follow the newest"),
-    ("c", "packets / log: clear"),
-    ("?", "this help"),
-    ("q  Ctrl-C", "quit"),
-];
-
 impl App {
     pub(crate) fn on_key(&mut self, key: KeyEvent) -> Vec<Command> {
         if key.kind != KeyEventKind::Press {
@@ -52,6 +36,9 @@ impl App {
         if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
             self.quit = true;
             return Vec::new();
+        }
+        if self.edit.is_some() {
+            return self.edit_key(key);
         }
         if self.help {
             self.help = !matches!(
@@ -71,6 +58,12 @@ impl App {
             KeyCode::Char('3') => self.tab = Tab::Log,
             KeyCode::Char('4' | 's') => self.tab = Tab::Settings,
             KeyCode::Char('r') => return vec![Command::Discover],
+            // Changing the device: each opens a form; nothing is sent
+            // until the form is confirmed.
+            KeyCode::Char('e') if self.tab == Tab::Browse => self.begin_write(false),
+            KeyCode::Char('n') if self.tab == Tab::Browse => self.begin_write(true),
+            KeyCode::Char('a') if self.tab == Tab::Browse => self.begin_create(),
+            KeyCode::Char('x') if self.tab == Tab::Browse => self.begin_delete(),
             KeyCode::Char('w') => {
                 self.watching = !self.watching;
                 self.log(format!(

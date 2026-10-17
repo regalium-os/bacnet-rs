@@ -119,11 +119,26 @@ pub fn object_ids(
     device: &Device,
     count: u32,
 ) -> Result<Vec<ObjectId>, String> {
+    object_ids_in(client, device, 1, count)
+}
+
+/// Entries `first..=last` of the device's object-list (1-based), read as
+/// [`object_ids`] reads them: one page of a listing, without the rest.
+///
+/// # Errors
+///
+/// When an entry cannot be read.
+pub fn object_ids_in(
+    client: &mut Client,
+    device: &Device,
+    first: u32,
+    end: u32,
+) -> Result<Vec<ObjectId>, String> {
     let me = ObjectId::new(8, device.instance);
     let mut ids = Vec::new();
-    let mut next = 1;
-    while next <= count {
-        let last = count.min(next + INDICES - 1);
+    let mut next = first.max(1);
+    while next <= end {
+        let last = end.min(next + INDICES - 1);
         let refs: Vec<PropertyRef> = (next..=last)
             .map(|i| PropertyRef {
                 property: 76,

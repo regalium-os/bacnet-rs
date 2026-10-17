@@ -78,7 +78,10 @@ const LEGAL: &[(&str, &[&str])] = &[
         &["regalium-bacnet-core", "regalium-bacnet-ip"],
     ),
     ("regalium-bacnet", &["regalium-bacnet-runtime"]),
-    ("regalium-bacnet-probe", &["regalium-bacnet-telemetry-otel"]),
+    (
+        "regalium-bacnet-probe",
+        &["regalium-bacnet-telemetry-otel", "regalium-bacnet-schema"],
+    ),
 ];
 
 /// A complete, legal workspace that the graph gates pass.

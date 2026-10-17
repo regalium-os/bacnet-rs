@@ -9,6 +9,7 @@
 //! channels: commands down, events up.
 
 mod app;
+mod edit;
 mod keys;
 mod settings;
 mod ui;

@@ -10,6 +10,7 @@
 //! responsive on a slow MS/TP trunk where every read costs tens of
 //! milliseconds.
 
+mod change;
 mod jobs;
 mod live;
 mod queue;
@@ -19,6 +20,7 @@ use crate::args::Net;
 use crate::connect::Connector;
 use bacnet_probe::scan::ObjectReport;
 use bacnet_probe::{Client, Device, Direction, Discovery, ObjectId, Value};
+pub(crate) use change::Change;
 use std::collections::{HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
@@ -41,6 +43,8 @@ pub(crate) enum Command {
     /// Reopen the socket with these options, then rediscover; answered by
     /// `Connected` or `ConnectFailed`.
     Reconfigure(Net),
+    /// Write, create or delete; answered by `Changed`.
+    Change(Change),
 }
 
 /// What the worker reports.
@@ -67,6 +71,15 @@ pub(crate) enum Event {
     Connected(Vec<String>),
     /// The requested options could not be opened; the previous ones stand.
     ConnectFailed(String),
+    /// A change was applied (`Ok`, with the object written or created) or
+    /// refused; `what` says which, for a person.
+    Changed {
+        instance: u32,
+        what: String,
+        /// The object list changed (a create or delete), not just a value.
+        structural: bool,
+        result: Result<Option<ObjectId>, String>,
+    },
 }
 
 /// One datagram, as the trace saw it.
@@ -117,7 +130,7 @@ impl Worker {
         events: Sender<Event>,
     ) -> Self {
         Self {
-            client: traced(client, &events),
+            client: reopen::traced(client, &events),
             plan,
             commands,
             events,
@@ -164,26 +177,13 @@ impl Worker {
             Command::Watch(w) => self.live.want(w),
             Command::SetInterval(d) => self.live.interval = d,
             Command::Reconfigure(net) => self.reconfigure(net),
+            Command::Change(c) => self.change(c),
         }
     }
 
     fn emit(&self, event: Event) {
         let _ = self.events.send(event);
     }
-}
-
-/// `client`, reporting every datagram as an `Event::Packet`.
-fn traced(client: Client, events: &Sender<Event>) -> Client {
-    let packets = events.clone();
-    client.with_trace(move |direction, peer, bytes| {
-        let packet = Packet {
-            at: Instant::now(),
-            direction,
-            peer,
-            bytes: bytes.to_vec(),
-        };
-        let _ = packets.send(Event::Packet(packet));
-    })
 }
 
 #[cfg(test)]

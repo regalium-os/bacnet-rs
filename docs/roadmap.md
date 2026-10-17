@@ -30,7 +30,7 @@ listed in order without inventing numbers for it.
 | 6 | `ReadProperty` and `Who-Is` / `I-Am` | |
 | 7 | BACnet/IP, Annex J | |
 | 8 | the first live read, end to end; the probe moves onto the driver | |
-| 9 | the schema tree, `protobuf/`, under the AIP linter | |
+| 9 | the schema tree, `protobuf/`, under the AIP linter | **built** early |
 | — | the breadth of types, services and the object model | |
 | — | MS/TP, BACnet/SC and BACnet/IPv6 | |
 | 17 | fuzz targets for every decoder | |
@@ -120,7 +120,11 @@ is implemented outside this repository. None interprets an APDU.
 archives. Over BACnet/IP: Who-Is discovery by broadcast, swept ranges or
 unicast, through a BBMD as a foreign device, and through routers to MS/TP;
 Who-Has; `ReadProperty` and `ReadPropertyMultiple` with fallback and request
-halving; COV with renewal and polling for what refuses; JSON and table output;
+halving; `WriteProperty` at a priority, `WritePropertyMultiple`,
+`CreateObject` and `DeleteObject`; the schema's device, object and property
+services, served over its client and reachable as `get`, `list`, `write`,
+`create` and `delete` by resource name; COV with renewal and polling for what
+refuses; JSON and table output;
 OTLP metrics; an offline dissector; a simulated gateway; and a TUI with
 Browse, Packets, Log and Settings tabs, where the network options are edited
 and applied live. See [its README](../tools/bacnet-probe/README.md).

@@ -11,6 +11,7 @@ pub(crate) mod follow;
 pub(crate) mod json_out;
 pub(crate) mod read;
 pub(crate) mod report;
+pub(crate) mod resource;
 pub(crate) mod scan;
 pub(crate) mod table;
 pub(crate) mod watch;

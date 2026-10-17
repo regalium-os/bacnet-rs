@@ -36,6 +36,15 @@ pub(crate) fn discover(sim: Sim) -> (Client, Device, SocketAddr) {
     (client, devices.remove(0), addr)
 }
 
+/// The API over a fresh simulated gateway, discovering by unicast to it.
+pub(crate) fn api() -> bacnet_probe::api::Api {
+    use bacnet_probe::Discovery;
+    use bacnet_probe::frame::Delivery;
+    let addr = Sim::lift_gateway().spawn().unwrap();
+    let plan = Discovery::to(addr, Delivery::Unicast).with_wait(Duration::from_millis(300));
+    bacnet_probe::api::Api::new(client(), plan)
+}
+
 /// The (error-class, error-code) a request was refused with; panics on
 /// success or any other failure, since a test calling this expects a refusal.
 pub(crate) fn refused<T: std::fmt::Debug>(result: Result<T, ReadError>) -> (u32, u32) {
